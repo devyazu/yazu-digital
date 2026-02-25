@@ -1,15 +1,15 @@
 /**
- * E-posta onay linki tıklandığında: token doğrula, profili güncelle, yönlendir.
+ * E-posta onay linki tıklandığında: token doğrula, profili güncelle, welcome + admin mailleri gönder, yönlendir.
  * GET /api/confirm-email?token=xxx
- * Vercel env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, APP_URL
  */
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
+import { sendTemplatedEmail } from './lib/emailHelpers.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const APP_URL = process.env.APP_URL || 'https://app.yazu.digital';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).end();
@@ -43,8 +43,37 @@ module.exports = async (req, res) => {
   }
 
   const now = new Date().toISOString();
+  const confirmedAt = new Date().toLocaleString('tr-TR');
   await supabase.from('profiles').update({ email_confirmed_at: now }).eq('id', row.user_id);
   await supabase.from('confirm_tokens').delete().eq('token', token);
 
+  const { data: userData } = await supabase.auth.admin.getUserById(row.user_id);
+  const userEmail = userData?.user?.email || '';
+  const userName = userData?.user?.user_metadata?.full_name || userData?.user?.user_metadata?.name || '';
+
+  try {
+    await sendTemplatedEmail(supabase, {
+      slug: 'welcome',
+      to: userEmail,
+      placeholders: { user_email: userEmail, user_name: userName, site_url: APP_URL },
+    });
+  } catch (e) {
+    console.error('Welcome email error:', e);
+  }
+
+  try {
+    const { data: adminRows } = await supabase.from('admin_users').select('email');
+    const adminEmails = (adminRows || []).map((r) => r.email).filter(Boolean);
+    for (const adminEmail of adminEmails) {
+      await sendTemplatedEmail(supabase, {
+        slug: 'admin_email_confirmed',
+        to: adminEmail,
+        placeholders: { user_email: userEmail, confirmed_at: confirmedAt },
+      });
+    }
+  } catch (e) {
+    console.error('Admin confirm notify error:', e);
+  }
+
   return res.redirect(302, `${APP_URL}/?confirm=ok`);
-};
+}

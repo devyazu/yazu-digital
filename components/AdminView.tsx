@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Category, Tool, UserProfile, AdminStats } from '../types';
 import { 
-  LayoutDashboard, Users, Wrench, FolderOpen, 
+  LayoutDashboard, Users, Wrench, FolderOpen, Mail,
   Search, Plus, Edit, Trash2, CheckCircle, XCircle, 
   BarChart3, DollarSign, Zap, Play, Settings, TrendingUp,
   Activity, ArrowUpRight, Globe, Loader2
@@ -28,8 +28,19 @@ interface AdminViewProps {
 
 const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit }) => {
   const { session } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics'>('tools');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail'>('tools');
   const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS_LIST);
+  // E-posta şablonları
+  const [emailTemplates, setEmailTemplates] = useState<Array<{ id: string; slug: string; name: string; description: string | null; subject: string; body_html: string; from_name: string | null; recipient_type: string; is_active: boolean; updated_at: string }>>([]);
+  const [emailTemplatesLoading, setEmailTemplatesLoading] = useState(false);
+  const [emailTemplatesError, setEmailTemplatesError] = useState<string | null>(null);
+  const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null);
+  const [editSubject, setEditSubject] = useState('');
+  const [editBodyHtml, setEditBodyHtml] = useState('');
+  const [templateSaveStatus, setTemplateSaveStatus] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle');
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailError, setTestEmailError] = useState<string | null>(null);
   const [realUsers, setRealUsers] = useState<AdminUserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
@@ -67,6 +78,34 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       })
       .finally(() => setUsersLoading(false));
   }, [activeTab, session?.access_token]);
+
+  useEffect(() => {
+    if (activeTab !== 'mail' || !session?.access_token) return;
+    setEmailTemplatesLoading(true);
+    setEmailTemplatesError(null);
+    fetch('/api/admin/email-templates', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `Hata ${r.status}`);
+        return data;
+      })
+      .then((data) => {
+        setEmailTemplates(data.templates || []);
+        if (!selectedTemplateSlug && (data.templates?.length > 0)) setSelectedTemplateSlug(data.templates[0].slug);
+      })
+      .catch((err) => {
+        setEmailTemplatesError(err?.message || 'Şablonlar yüklenemedi.');
+      })
+      .finally(() => setEmailTemplatesLoading(false));
+  }, [activeTab, session?.access_token]);
+
+  useEffect(() => {
+    const t = emailTemplates.find((x) => x.slug === selectedTemplateSlug);
+    if (t) {
+      setEditSubject(t.subject);
+      setEditBodyHtml(t.body_html);
+    }
+  }, [selectedTemplateSlug, emailTemplates]);
 
   // Mock Stats (tools/categories için mock users kullanılıyor; analytics sayısı realUsers ile güncellenebilir)
   const stats: AdminStats = {
@@ -610,13 +649,140 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       </div>
   );
 
+  const handleSaveTemplate = async () => {
+    if (!selectedTemplateSlug || !session?.access_token) return;
+    setTemplateSaveStatus('saving');
+    try {
+      const r = await fetch('/api/admin/email-templates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ slug: selectedTemplateSlug, subject: editSubject, body_html: editBodyHtml }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || data?.detail || `Hata ${r.status}`);
+      setEmailTemplates((prev) => prev.map((t) => (t.slug === selectedTemplateSlug ? { ...t, subject: editSubject, body_html: editBodyHtml, updated_at: new Date().toISOString() } : t)));
+      setTemplateSaveStatus('ok');
+      setTimeout(() => setTemplateSaveStatus('idle'), 2000);
+    } catch (e) {
+      setTemplateSaveStatus('error');
+      setTimeout(() => setTemplateSaveStatus('idle'), 3000);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!selectedTemplateSlug || !testEmailTo.trim() || !session?.access_token) return;
+    setTestEmailSending(true);
+    setTestEmailError(null);
+    try {
+      const r = await fetch('/api/admin/send-test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ templateSlug: selectedTemplateSlug, to: testEmailTo.trim(), placeholders: {} }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || data?.detail || `Hata ${r.status}`);
+      setTestEmailError(null);
+    } catch (e) {
+      setTestEmailError(e?.message || 'Test maili gönderilemedi.');
+    } finally {
+      setTestEmailSending(false);
+    }
+  };
+
+  const renderMail = () => (
+    <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in">
+      <div className="p-4 border-b border-stone-200 bg-stone-50 flex flex-wrap items-center gap-4">
+        <h3 className="font-bold text-stone-800">E-posta şablonları</h3>
+      </div>
+      {emailTemplatesLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+        </div>
+      ) : emailTemplatesError ? (
+        <div className="p-8 text-center text-red-600">{emailTemplatesError}</div>
+      ) : (
+        <div className="flex flex-1 min-h-0">
+          <div className="w-56 border-r border-stone-200 p-2 flex flex-col gap-1">
+            {emailTemplates.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setSelectedTemplateSlug(t.slug)}
+                className={`text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedTemplateSlug === t.slug ? 'bg-brand-100 text-brand-800' : 'text-stone-600 hover:bg-stone-100'}`}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 p-6 overflow-auto">
+            {selectedTemplateSlug && (
+              <>
+                <div className="space-y-4 max-w-2xl">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-500 mb-1">Konu</label>
+                    <input
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-stone-500 mb-1">HTML içerik</label>
+                    <textarea
+                      value={editBodyHtml}
+                      onChange={(e) => setEditBodyHtml(e.target.value)}
+                      rows={12}
+                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm font-mono"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleSaveTemplate}
+                      disabled={templateSaveStatus === 'saving'}
+                      className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {templateSaveStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Kaydet
+                    </button>
+                    {templateSaveStatus === 'ok' && <span className="text-green-600 text-sm">Kaydedildi.</span>}
+                    {templateSaveStatus === 'error' && <span className="text-red-600 text-sm">Kaydetme hatası.</span>}
+                  </div>
+                </div>
+                <div className="mt-8 pt-6 border-t border-stone-200 max-w-2xl">
+                  <h4 className="font-bold text-stone-700 mb-2">Test maili gönder</h4>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="email"
+                      placeholder="E-posta adresi"
+                      value={testEmailTo}
+                      onChange={(e) => setTestEmailTo(e.target.value)}
+                      className="px-3 py-2 border border-stone-200 rounded-lg text-sm w-64"
+                    />
+                    <button
+                      onClick={handleSendTestEmail}
+                      disabled={testEmailSending || !testEmailTo.trim()}
+                      className="px-4 py-2 bg-stone-700 text-white text-sm font-bold rounded-lg hover:bg-stone-800 disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {testEmailSending && <Loader2 className="w-4 h-4 animate-spin" />}
+                      Gönder
+                    </button>
+                  </div>
+                  {testEmailError && <p className="mt-2 text-sm text-red-600">{testEmailError}</p>}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#F2F2F0]">
       {/* Admin Header */}
       <div className="h-16 bg-brand-600 text-white flex items-center justify-between px-6 shadow-md z-20">
         <div className="flex items-center gap-3">
            <div className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Admin Mode</div>
-           <h2 className="font-bold text-lg">YAZU Coommander</h2>
+           <h2 className="font-bold text-lg">YAZU Command Center</h2>
         </div>
         <button onClick={onExit} className="text-sm text-stone-400 hover:text-white flex items-center gap-2">
            Exit to App <Settings className="w-4 h-4" />
@@ -651,6 +817,12 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                >
                  <FolderOpen className="w-4 h-4" /> Categories
                </button>
+               <button 
+                 onClick={() => setActiveTab('mail')}
+                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'mail' ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100'}`}
+               >
+                 <Mail className="w-4 h-4" /> E-posta
+               </button>
             </nav>
             <div className="mt-auto p-6 border-t border-stone-200">
                <div className="text-xs text-stone-400 font-mono">v2.5.0 (Build 9001)</div>
@@ -665,6 +837,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'tools' && renderTools()}
             {activeTab === 'categories' && renderCategories()}
+            {activeTab === 'mail' && renderMail()}
          </div>
       </div>
     </div>
