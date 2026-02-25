@@ -43,6 +43,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const [testEmailSending, setTestEmailSending] = useState(false);
   const [testEmailError, setTestEmailError] = useState<string | null>(null);
   const emailEditorRef = useRef<EmailTemplateEditorRef>(null);
+  const [emailEditorFullscreen, setEmailEditorFullscreen] = useState(false);
   const [realUsers, setRealUsers] = useState<AdminUserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
@@ -651,9 +652,12 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       </div>
   );
 
+  const getEditorHtml = () =>
+    emailEditorRef.current?.getInlinedHtml?.() || emailEditorRef.current?.getHtml() || editBodyHtml;
+
   const handleSaveTemplate = async () => {
     if (!selectedTemplateSlug || !session?.access_token) return;
-    const html = emailEditorRef.current?.getInlinedHtml?.() || emailEditorRef.current?.getHtml() || editBodyHtml;
+    const html = getEditorHtml();
     setTemplateSaveStatus('saving');
     try {
       const r = await fetch('/api/admin/email-templates', {
@@ -664,12 +668,19 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || data?.detail || `Hata ${r.status}`);
       setEmailTemplates((prev) => prev.map((t) => (t.slug === selectedTemplateSlug ? { ...t, subject: editSubject, body_html: html, updated_at: new Date().toISOString() } : t)));
+      setEditBodyHtml(html);
       setTemplateSaveStatus('ok');
       setTimeout(() => setTemplateSaveStatus('idle'), 2000);
     } catch (e) {
       setTemplateSaveStatus('error');
       setTimeout(() => setTemplateSaveStatus('idle'), 3000);
     }
+  };
+
+  const handleCloseFullscreenEditor = () => {
+    const html = getEditorHtml();
+    setEditBodyHtml(html);
+    setEmailEditorFullscreen(false);
   };
 
   const handleSendTestEmail = async () => {
@@ -729,13 +740,16 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1">İçerik (sürükle-bırak)</label>
-                    <EmailTemplateEditor
-                      ref={emailEditorRef}
-                      initialHtml={editBodyHtml}
-                      templateKey={selectedTemplateSlug ?? undefined}
-                      className="border border-stone-200 rounded-lg overflow-hidden"
-                    />
+                    <label className="block text-xs font-bold text-stone-500 mb-1">İçerik</label>
+                    <button
+                      type="button"
+                      onClick={() => setEmailEditorFullscreen(true)}
+                      className="w-full py-6 border-2 border-dashed border-stone-300 rounded-xl text-stone-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50/50 transition-colors flex flex-col items-center justify-center gap-2"
+                    >
+                      <Mail className="w-10 h-10 text-stone-400" />
+                      <span className="font-medium">E-postayı tasarla</span>
+                      <span className="text-xs">Tam ekran sürükle-bırak editörü aç</span>
+                    </button>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -779,8 +793,51 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     </div>
   );
 
+  const selectedTemplateName = selectedTemplateSlug ? emailTemplates.find((t) => t.slug === selectedTemplateSlug)?.name : '';
+
   return (
-    <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#F2F2F0]">
+    <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#F2F2F0] relative">
+      {/* Tam ekran e-posta editörü */}
+      {emailEditorFullscreen && selectedTemplateSlug && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          <div className="h-14 flex-shrink-0 border-b border-stone-200 bg-stone-50 flex items-center justify-between px-4">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleCloseFullscreenEditor}
+                className="text-stone-600 hover:text-stone-800 font-medium flex items-center gap-2"
+              >
+                ← Geri
+              </button>
+              <span className="text-stone-500">|</span>
+              <span className="font-bold text-stone-800">{selectedTemplateName || selectedTemplateSlug}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {templateSaveStatus === 'ok' && <span className="text-green-600 text-sm">Kaydedildi</span>}
+              {templateSaveStatus === 'error' && <span className="text-red-600 text-sm">Hata</span>}
+              <button
+                type="button"
+                onClick={handleSaveTemplate}
+                disabled={templateSaveStatus === 'saving'}
+                className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {templateSaveStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
+                Kaydet
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 flex flex-col">
+            <EmailTemplateEditor
+              ref={emailEditorRef}
+              initialHtml={editBodyHtml}
+              templateKey={selectedTemplateSlug}
+              className="flex-1 min-h-0 w-full"
+              fullHeight
+            />
+          </div>
+        </div>
+      )}
+
       {/* Admin Header */}
       <div className="h-16 bg-brand-600 text-white flex items-center justify-between px-6 shadow-md z-20">
         <div className="flex items-center gap-3">

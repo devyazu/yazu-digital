@@ -20,10 +20,12 @@ interface EmailTemplateEditorProps {
   /** Şablon değişince editörü yeniden mount etmek için (key olarak kullanılır) */
   templateKey?: string;
   className?: string;
+  /** Tam ekran modunda tüm yüksekliği kullan */
+  fullHeight?: boolean;
 }
 
 const EmailTemplateEditor = forwardRef<EmailTemplateEditorRef, EmailTemplateEditorProps>(
-  function EmailTemplateEditor({ initialHtml, templateKey, className }, ref) {
+  function EmailTemplateEditor({ initialHtml, templateKey, className, fullHeight }, ref) {
     const editorInstance = useRef<ReturnType<typeof grapesjs.init> | null>(null);
 
     useImperativeHandle(
@@ -45,13 +47,13 @@ const EmailTemplateEditor = forwardRef<EmailTemplateEditorRef, EmailTemplateEdit
     );
 
     return (
-      <div className={className} style={{ minHeight: 420 }}>
+      <div className={className} style={fullHeight ? { minHeight: 0, height: '100%' } : { minHeight: 420 }}>
         <GjsEditor
           key={templateKey ?? 'default'}
           grapesjs={grapesjs}
           grapesjsCss=""
           options={{
-            height: '400px',
+            height: fullHeight ? '100%' : '400px',
             storageManager: false,
             autorender: true,
             fromElement: false,
