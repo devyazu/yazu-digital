@@ -18,14 +18,21 @@ export class EmailEditorErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(): void {
-    this.props.onClose();
+    // onClose() burada çağrılmıyor; overlay açık kalsın, kullanıcı Geri ile kapatsın
   }
 
   render(): React.ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center flex-1 bg-stone-50 p-8">
-          <p className="text-stone-600">Editör kapatıldı, panele dönülüyor…</p>
+        <div className="flex flex-col items-center justify-center flex-1 bg-stone-50 p-8 gap-4">
+          <p className="text-stone-600">Editör yüklenirken hata oluştu.</p>
+          <button
+            type="button"
+            onClick={this.props.onClose}
+            className="px-4 py-2 bg-stone-700 text-white text-sm font-medium rounded-lg hover:bg-stone-800"
+          >
+            ← Panele dön
+          </button>
         </div>
       );
     }
