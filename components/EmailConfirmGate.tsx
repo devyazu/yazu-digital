@@ -15,6 +15,7 @@ export default function EmailConfirmGate({ userId, onSignOut, children }: EmailC
   const [loading, setLoading] = useState(true);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendDone, setResendDone] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
 
   const loadProfile = React.useCallback(() => {
     getProfile(userId).then(({ profile: p }) => {
@@ -46,14 +47,27 @@ export default function EmailConfirmGate({ userId, onSignOut, children }: EmailC
 
   const handleResend = async () => {
     setResendDone(false);
+    setResendError(null);
     setResendLoading(true);
     try {
-      await fetch('/api/send-confirm-email', {
+      const r = await fetch('/api/send-confirm-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, email: undefined }),
       });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg = data?.detail || data?.error || `Hata ${r.status}`;
+        setResendError(msg);
+        return;
+      }
+      if (data.sent === false) {
+        setResendError(data?.detail || data?.error || 'E-posta gönderilemedi.');
+        return;
+      }
       setResendDone(true);
+    } catch (e) {
+      setResendError(e?.message || 'Bağlantı hatası.');
     } finally {
       setResendLoading(false);
     }
@@ -91,6 +105,9 @@ export default function EmailConfirmGate({ userId, onSignOut, children }: EmailC
           </p>
           {resendDone && (
             <p className="text-green-600 text-sm font-medium mb-3">Onay linki e-postanıza tekrar gönderildi.</p>
+          )}
+          {resendError && (
+            <p className="text-red-600 text-sm font-medium mb-3">E-posta gönderilemedi: {resendError}</p>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
             <button

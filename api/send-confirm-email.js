@@ -4,9 +4,9 @@
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, APP_URL
  *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
  */
-const { createClient } = require('@supabase/supabase-js');
-const { randomUUID } = require('crypto');
-const nodemailer = require('nodemailer');
+import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
+import nodemailer from 'nodemailer';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -19,21 +19,26 @@ const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
 const SMTP_FROM = process.env.SMTP_FROM || 'Yazu.digital <noreply@yazu.digital>';
 
-module.exports = async (req, res) => {
+function send(res, status, body) {
+  if (res?.setHeader) res.setHeader('Content-Type', 'application/json');
+  if (typeof res?.status === 'function') return res.status(status).json(body);
+}
+
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
 
   const { userId, email: bodyEmail } = req.body || {};
   if (!userId) {
-    return res.status(400).json({ error: 'Missing userId' });
+    return send(res, 400, { error: 'Missing userId' });
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(503).json({ error: 'Supabase not configured for this API' });
+    return send(res, 503, { error: 'Supabase not configured for this API' });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -43,7 +48,7 @@ module.exports = async (req, res) => {
     email = userData?.user?.email;
   }
   if (!email) {
-    return res.status(400).json({ error: 'Email not found for user' });
+    return send(res, 400, { error: 'Email not found for user' });
   }
 
   const token = randomUUID();
@@ -57,7 +62,7 @@ module.exports = async (req, res) => {
 
   if (insertErr) {
     console.error('confirm_tokens insert:', insertErr);
-    return res.status(500).json({ error: 'Could not create confirmation token' });
+    return send(res, 500, { error: 'Could not create confirmation token', detail: insertErr.message });
   }
 
   const confirmLink = `${APP_URL}/api/confirm-email?token=${token}`;
@@ -71,24 +76,35 @@ module.exports = async (req, res) => {
     <p>— Yazu.digital</p>
   `;
 
-  if (SMTP_HOST && SMTP_USER && SMTP_PASSWORD) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: SMTP_HOST,
-        port: SMTP_PORT,
-        secure: SMTP_SECURE,
-        auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
-      });
-      await transporter.sendMail({
-        from: SMTP_FROM,
-        to: email,
-        subject,
-        html,
-      });
-    } catch (e) {
-      console.error('SMTP send error:', e);
-    }
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD) {
+    console.error('SMTP not configured: missing SMTP_HOST, SMTP_USER or SMTP_PASSWORD');
+    return send(res, 503, {
+      error: 'E-posta sunucusu yapılandırılmamış',
+      detail: 'Vercel ortam değişkenlerinde SMTP_HOST, SMTP_USER, SMTP_PASSWORD tanımlı olmalı.',
+      sent: false,
+    });
   }
 
-  return res.status(200).json({ ok: true });
-};
+  try {
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
+    });
+    await transporter.sendMail({
+      from: SMTP_FROM,
+      to: email,
+      subject,
+      html,
+    });
+    return send(res, 200, { ok: true, sent: true });
+  } catch (e) {
+    console.error('SMTP send error:', e);
+    return send(res, 500, {
+      error: 'E-posta gönderilemedi',
+      detail: e?.message || String(e),
+      sent: false,
+    });
+  }
+}
