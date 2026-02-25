@@ -9,6 +9,7 @@ import {
 import { MOCK_USERS_LIST } from '../data';
 import { useAuth } from '../context/AuthContext';
 import EmailTemplateEditor, { type EmailTemplateEditorRef } from './EmailTemplateEditor';
+import { EmailEditorErrorBoundary } from './EmailEditorErrorBoundary';
 
 export interface AdminUserRow {
   id: string;
@@ -683,11 +684,22 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   };
 
   const handleCloseFullscreenEditor = () => {
-    const html = getEditorHtml();
-    const json = getEditorJson();
-    setEditBodyHtml(html);
-    setEditBodyJson(json);
+    let html: string | null = null;
+    let json: unknown = null;
+    try {
+      html = getEditorHtml();
+      json = getEditorJson();
+    } catch (_e) {
+      // ignore serialization errors
+    }
+    // Önce fullscreen kapat; unmount sırasında state güncellemesi crash’e yol açabiliyor
     setEmailEditorFullscreen(false);
+    if (html != null || json != null) {
+      setTimeout(() => {
+        if (html != null) setEditBodyHtml(html);
+        if (json != null) setEditBodyJson(json);
+      }, 0);
+    }
   };
 
   const handleSendTestEmail = async () => {
@@ -806,43 +818,57 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#F2F2F0] relative">
       {/* Tam ekran e-posta editörü */}
       {emailEditorFullscreen && selectedTemplateSlug && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white">
-          <div className="h-14 flex-shrink-0 border-b border-stone-200 bg-stone-50 flex items-center justify-between px-4">
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={handleCloseFullscreenEditor}
-                className="text-stone-600 hover:text-stone-800 font-medium flex items-center gap-2"
-              >
-                ← Geri
-              </button>
-              <span className="text-stone-500">|</span>
-              <span className="font-bold text-stone-800">{selectedTemplateName || selectedTemplateSlug}</span>
+        <EmailEditorErrorBoundary onClose={handleCloseFullscreenEditor}>
+          <div className="fixed inset-0 z-50 flex flex-col bg-white min-w-0">
+            <div className="h-14 flex-shrink-0 border-b border-stone-200 bg-stone-50 flex items-center justify-between px-4">
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={handleCloseFullscreenEditor}
+                  className="text-stone-600 hover:text-stone-800 font-medium flex items-center gap-2"
+                >
+                  ← Geri
+                </button>
+                <span className="text-stone-500">|</span>
+                <span className="font-bold text-stone-800">{selectedTemplateName || selectedTemplateSlug}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {templateSaveStatus === 'ok' && <span className="text-green-600 text-sm">Kaydedildi</span>}
+                {templateSaveStatus === 'error' && <span className="text-red-600 text-sm">Hata</span>}
+                <button
+                  type="button"
+                  onClick={handleSaveTemplate}
+                  disabled={templateSaveStatus === 'saving'}
+                  className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {templateSaveStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Kaydet
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {templateSaveStatus === 'ok' && <span className="text-green-600 text-sm">Kaydedildi</span>}
-              {templateSaveStatus === 'error' && <span className="text-red-600 text-sm">Hata</span>}
-              <button
-                type="button"
-                onClick={handleSaveTemplate}
-                disabled={templateSaveStatus === 'saving'}
-                className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                {templateSaveStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
-                Kaydet
-              </button>
+            {/* body_json yoksa orijinal HTML’i göster */}
+            {editBodyHtml?.trim() && !editBodyJson?.trim() && (
+              <div className="flex-shrink-0 border-b border-stone-200 bg-amber-50/80 p-3">
+                <p className="text-xs font-medium text-amber-800 mb-2">
+                  Bu şablon eski formatta (sadece HTML). Aşağıdaki sürükle-bırak editörde yeniden oluşturup Kaydet’e basarsanız yeni format kaydedilir.
+                </p>
+                <div
+                  className="max-h-32 overflow-auto rounded border border-amber-200 bg-white p-3 text-sm text-stone-700 prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: editBodyHtml }}
+                />
+              </div>
+            )}
+            <div className="flex-1 min-h-0 flex flex-col min-w-0 w-full">
+              <EmailTemplateEditor
+                ref={emailEditorRef}
+                initialJson={editBodyJson}
+                templateKey={selectedTemplateSlug}
+                className="flex-1 min-h-0 w-full"
+                fullHeight
+              />
             </div>
           </div>
-          <div className="flex-1 min-h-0 flex flex-col">
-            <EmailTemplateEditor
-              ref={emailEditorRef}
-              initialJson={editBodyJson}
-              templateKey={selectedTemplateSlug}
-              className="flex-1 min-h-0 w-full"
-              fullHeight
-            />
-          </div>
-        </div>
+        </EmailEditorErrorBoundary>
       )}
 
       {/* Admin Header */}
