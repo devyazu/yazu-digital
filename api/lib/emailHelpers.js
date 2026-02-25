@@ -4,12 +4,13 @@
  */
 import nodemailer from 'nodemailer';
 
-const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
-const SMTP_SECURE = process.env.SMTP_SECURE === 'true';
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
-const DEFAULT_FROM = process.env.SMTP_FROM || 'Yazu.digital <noreply@yazu.digital>';
+const SMTP_HOST = process.env.SMTP_HOST?.trim();
+const SMTP_PORT = parseInt(process.env.SMTP_PORT?.trim() || '587', 10);
+// Port 465 = SSL from start (secure: true). Port 587 = STARTTLS (secure: false). Wrong pairing causes "wrong version number".
+const SMTP_SECURE = SMTP_PORT === 465;
+const SMTP_USER = process.env.SMTP_USER?.trim();
+const SMTP_PASSWORD = process.env.SMTP_PASSWORD != null ? String(process.env.SMTP_PASSWORD).trim() : undefined;
+const DEFAULT_FROM = (process.env.SMTP_FROM || 'Yazu.digital <noreply@yazu.digital>').trim();
 
 export function replacePlaceholders(text, placeholders = {}) {
   if (!text || typeof text !== 'string') return text;
@@ -42,12 +43,22 @@ export async function sendMail({ to, subject, html, from = DEFAULT_FROM }) {
     secure: SMTP_SECURE,
     auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
   });
-  await transporter.sendMail({
-    from,
-    to,
-    subject,
-    html: html || '',
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html: html || '',
+    });
+  } catch (err) {
+    const msg = err?.message || String(err);
+    if (/535|authentication|Invalid login/i.test(msg)) {
+      throw new Error(
+        'SMTP 535: Kimlik doğrulama hatası. Kontrol edin: SMTP_USER tam e-posta olmalı (örn. noreply@mail.yazu.digital); şifre boşluksuz; port 465 ise SMTP_SECURE=true; 587 ise SMTP_SECURE=false. ' + msg
+      );
+    }
+    throw err;
+  }
 }
 
 function getFromAddress(fromName) {

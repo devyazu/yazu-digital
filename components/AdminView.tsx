@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Category, Tool, UserProfile, AdminStats } from '../types';
 import { 
   LayoutDashboard, Users, Wrench, FolderOpen, Mail,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { MOCK_USERS_LIST } from '../data';
 import { useAuth } from '../context/AuthContext';
+import EmailTemplateEditor, { type EmailTemplateEditorRef } from './EmailTemplateEditor';
 
 export interface AdminUserRow {
   id: string;
@@ -41,6 +42,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const [testEmailTo, setTestEmailTo] = useState('');
   const [testEmailSending, setTestEmailSending] = useState(false);
   const [testEmailError, setTestEmailError] = useState<string | null>(null);
+  const emailEditorRef = useRef<EmailTemplateEditorRef>(null);
   const [realUsers, setRealUsers] = useState<AdminUserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
@@ -651,16 +653,17 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
 
   const handleSaveTemplate = async () => {
     if (!selectedTemplateSlug || !session?.access_token) return;
+    const html = emailEditorRef.current?.getInlinedHtml?.() || emailEditorRef.current?.getHtml() || editBodyHtml;
     setTemplateSaveStatus('saving');
     try {
       const r = await fetch('/api/admin/email-templates', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ slug: selectedTemplateSlug, subject: editSubject, body_html: editBodyHtml }),
+        body: JSON.stringify({ slug: selectedTemplateSlug, subject: editSubject, body_html: html }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || data?.detail || `Hata ${r.status}`);
-      setEmailTemplates((prev) => prev.map((t) => (t.slug === selectedTemplateSlug ? { ...t, subject: editSubject, body_html: editBodyHtml, updated_at: new Date().toISOString() } : t)));
+      setEmailTemplates((prev) => prev.map((t) => (t.slug === selectedTemplateSlug ? { ...t, subject: editSubject, body_html: html, updated_at: new Date().toISOString() } : t)));
       setTemplateSaveStatus('ok');
       setTimeout(() => setTemplateSaveStatus('idle'), 2000);
     } catch (e) {
@@ -726,12 +729,12 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1">HTML içerik</label>
-                    <textarea
-                      value={editBodyHtml}
-                      onChange={(e) => setEditBodyHtml(e.target.value)}
-                      rows={12}
-                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm font-mono"
+                    <label className="block text-xs font-bold text-stone-500 mb-1">İçerik (sürükle-bırak)</label>
+                    <EmailTemplateEditor
+                      ref={emailEditorRef}
+                      initialHtml={editBodyHtml}
+                      templateKey={selectedTemplateSlug ?? undefined}
+                      className="border border-stone-200 rounded-lg overflow-hidden"
                     />
                   </div>
                   <div className="flex items-center gap-3">
