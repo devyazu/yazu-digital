@@ -2,13 +2,13 @@
  * Admin kullanıcı listesi. Sadece admin_users'da olan kullanıcılar çağırabilir.
  * Vercel env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY (veya VITE_SUPABASE_ANON_KEY)
  */
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -47,15 +47,18 @@ module.exports = async (req, res) => {
   });
   if (listError) {
     console.error('listUsers error:', listError);
-    return res.status(500).json({ error: 'Could not list users' });
+    return res.status(500).json({ error: 'Could not list users', detail: listError.message });
   }
+
+  const rawList = listData?.users ?? (Array.isArray(listData) ? listData : []);
+  const userList = Array.isArray(rawList) ? rawList : [];
 
   const { data: adminEmails } = await supabaseAdmin
     .from('admin_users')
     .select('email');
   const adminSet = new Set((adminEmails || []).map((r) => r.email));
 
-  const users = (listData?.users || []).map((u) => ({
+  const users = userList.map((u) => ({
     id: u.id,
     email: u.email || '',
     created_at: u.created_at,
@@ -63,4 +66,4 @@ module.exports = async (req, res) => {
   }));
 
   return res.status(200).json({ users });
-};
+}

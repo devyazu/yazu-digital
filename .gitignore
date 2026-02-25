@@ -1,0 +1,14 @@
+# Ortam değişkenleri (şifre, API key – asla commit etme)
+.env
+.env.local
+.env.*.local
+
+# Bağımlılıklar ve build
+node_modules/
+dist/
+
+# IDE / OS
+.DS_Store
+*.log
+.idea/
+.vscode/

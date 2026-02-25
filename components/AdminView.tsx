@@ -28,6 +28,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS_LIST);
   const [realUsers, setRealUsers] = useState<AdminUserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const [usersSearch, setUsersSearch] = useState('');
   
   // Tool Editor State
@@ -37,14 +38,28 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   useEffect(() => {
     if (activeTab !== 'users' || !session?.access_token) return;
     setUsersLoading(true);
+    setUsersError(null);
     fetch('/api/list-users', {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load users'))))
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const msg = data?.error || `Hata ${r.status}`;
+          if (r.status === 401) throw new Error('Oturum geçersiz. Çıkış yapıp tekrar giriş yapın.');
+          if (r.status === 403) throw new Error('Admin yetkisi gerekli.');
+          if (r.status === 503) throw new Error('Sunucu ayarları eksik. Vercel\'de SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY tanımlı olmalı.');
+          throw new Error(msg);
+        }
+        return data;
+      })
       .then((data) => {
         setRealUsers(data.users || []);
       })
-      .catch(() => setRealUsers([]))
+      .catch((err) => {
+        setRealUsers([]);
+        setUsersError(err?.message || 'Kullanıcılar yüklenemedi.');
+      })
       .finally(() => setUsersLoading(false));
   }, [activeTab, session?.access_token]);
 
@@ -306,6 +321,11 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       {usersLoading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+        </div>
+      ) : usersError ? (
+        <div className="p-8 text-center">
+          <p className="text-red-600 font-medium mb-2">{usersError}</p>
+          <p className="text-sm text-stone-500">Vercel ortam değişkenlerinde SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY tanımlı olduğundan emin olun.</p>
         </div>
       ) : (
         <table className="w-full text-left text-sm">
