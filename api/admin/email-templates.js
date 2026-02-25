@@ -3,6 +3,7 @@
  * Authorization: Bearer <admin JWT>
  */
 import requireAdmin from '../lib/adminAuth.js';
+import { stripDataUrlsFromHtml } from '../lib/emailHelpers.js';
 
 function send(res, status, body) {
   if (typeof res?.setHeader === 'function') res.setHeader('Content-Type', 'application/json');
@@ -49,7 +50,7 @@ export default async function handler(req, res) {
     }
     const updates = {};
     if (subject !== undefined) updates.subject = subject;
-    if (body_html !== undefined) updates.body_html = body_html;
+    if (body_html !== undefined) updates.body_html = stripDataUrlsFromHtml(body_html);
     if (from_name !== undefined) updates.from_name = from_name;
     if (typeof is_active === 'boolean') updates.is_active = is_active;
     updates.updated_at = new Date().toISOString();

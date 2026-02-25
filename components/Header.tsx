@@ -137,7 +137,7 @@ const Header: React.FC<HeaderProps> = ({
                   >
                     <div className="flex items-center gap-3">
                         <img 
-                            src={brand.logoUrl || "https://images.unsplash.com/photo-1633409361618-c73427e4e206?w=100&h=100&fit=crop"} 
+                            src={brand.logoUrl || "/yazu.svg"} 
                             alt={brand.name} 
                             className="w-6 h-6 rounded-full object-cover border border-stone-200 group-hover:border-brand-300" 
                         />

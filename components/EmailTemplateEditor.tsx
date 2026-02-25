@@ -57,6 +57,13 @@ const EmailTemplateEditor = forwardRef<EmailTemplateEditorRef, EmailTemplateEdit
             storageManager: false,
             autorender: true,
             fromElement: false,
+            deviceManager: {
+              devices: [
+                { name: 'Desktop', width: '' },
+                { name: 'Tablet', width: '768px', widthMedia: '992px' },
+                { name: 'Mobile', width: '320px', widthMedia: '480px' },
+              ],
+            },
           }}
           plugins={[gjsBlocksBasic, gjsPresetNewsletter]}
           onEditor={(editor) => {

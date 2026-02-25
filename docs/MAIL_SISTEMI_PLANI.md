@@ -30,6 +30,8 @@ Bu dokümanda tüm mail akışları, admin yönetim paneli, otomasyon ve editör
 
 Tüm bu mailler **veritabanındaki şablonlardan** (subject + HTML body) alınacak; admin panelden düzenlenebilecek.
 
+**Görseller:** E-postada görsel kullanmak için GrapesJS’te Image bloğuna **URL** (https://…) girin. Yükleme (upload) base64 üretir; sistem güvenlik nedeniyle data URL’leri e-postadan çıkarır, bu yüzden yüklenen görsel mailde görünmez. Görselin public bir adresi olmalı.
+
 ---
 
 ## 2. Veritabanı şeması

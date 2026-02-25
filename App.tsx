@@ -151,7 +151,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
       id: `brand-${Date.now()}`,
       name: 'New Brand',
       website: '',
-      logoUrl: 'https://images.unsplash.com/photo-1620641788427-b11e64228af2?w=100&h=100&fit=crop',
+      logoUrl: '/yazu.svg',
       integrations: []
     };
     setBrands([...brands, newBrand]);

@@ -62,7 +62,7 @@ const BrandsView: React.FC<BrandsViewProps> = ({ brands, user, onSelectBrand, on
                     {/* Logo with Hover Edit Effect */}
                     <div className="relative w-16 h-16 rounded-xl overflow-hidden shadow-md group/logo">
                         <img 
-                            src={brand.logoUrl || "https://images.unsplash.com/photo-1633409361618-c73427e4e206?w=200&h=200&fit=crop"} 
+                            src={brand.logoUrl || "/yazu.svg"} 
                             alt={brand.name} 
                             className="w-full h-full object-cover"
                         />

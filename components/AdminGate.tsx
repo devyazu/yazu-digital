@@ -28,6 +28,17 @@ export default function AdminGate({ mainAppUrl = 'https://app.yazu.digital' }: A
     return () => { cancelled = true; };
   }, [user?.email]);
 
+  useEffect(() => {
+    if (user && adminCheck === true) {
+      const link = document.getElementById('favicon') as HTMLLinkElement;
+      if (link) link.href = '/admin-fav.svg';
+      return () => {
+        const l = document.getElementById('favicon') as HTMLLinkElement;
+        if (l) l.href = '/yazu-fav.svg';
+      };
+    }
+  }, [user, adminCheck]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#F2F2F0] flex items-center justify-center">

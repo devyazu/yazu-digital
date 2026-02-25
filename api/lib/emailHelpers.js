@@ -12,6 +12,12 @@ const SMTP_USER = process.env.SMTP_USER?.trim();
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD != null ? String(process.env.SMTP_PASSWORD).trim() : undefined;
 const DEFAULT_FROM = (process.env.SMTP_FROM || 'Yazu.digital <noreply@yazu.digital>').trim();
 
+/** E-postada base64 görseller uzun kod gibi görünür; img src'deki data: URL'leri kaldırır (boş bırakır). */
+export function stripDataUrlsFromHtml(html) {
+  if (!html || typeof html !== 'string') return html;
+  return html.replace(/\ssrc="data:image[^"]*"/gi, ' src=""');
+}
+
 export function replacePlaceholders(text, placeholders = {}) {
   if (!text || typeof text !== 'string') return text;
   let out = text;
@@ -43,12 +49,13 @@ export async function sendMail({ to, subject, html, from = DEFAULT_FROM }) {
     secure: SMTP_SECURE,
     auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
   });
+  const safeHtml = stripDataUrlsFromHtml(html || '');
   try {
     await transporter.sendMail({
       from,
       to,
       subject,
-      html: html || '',
+      html: safeHtml,
     });
   } catch (err) {
     const msg = err?.message || String(err);
@@ -72,7 +79,8 @@ export async function sendTemplatedEmail(supabase, { slug, to, placeholders = {}
   const t = await getTemplate(supabase, slug);
   if (!t) throw new Error(`Template not found: ${slug}`);
   const subject = replacePlaceholders(t.subject, placeholders);
-  const html = replacePlaceholders(t.body_html, placeholders);
+  let html = replacePlaceholders(t.body_html, placeholders);
+  html = stripDataUrlsFromHtml(html);
   const from = getFromAddress(t.from_name);
   await sendMail({ to, subject, html, from });
 }
