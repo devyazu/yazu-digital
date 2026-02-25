@@ -6,13 +6,15 @@ const CONFIRM_HOURS = 3;
 
 interface EmailConfirmGateProps {
   userId: string;
+  onSignOut?: () => void | Promise<void>;
   children: React.ReactNode;
 }
 
-export default function EmailConfirmGate({ userId, children }: EmailConfirmGateProps) {
+export default function EmailConfirmGate({ userId, onSignOut, children }: EmailConfirmGateProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resendLoading, setResendLoading] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
 
   const loadProfile = React.useCallback(() => {
     getProfile(userId).then(({ profile: p }) => {
@@ -43,6 +45,7 @@ export default function EmailConfirmGate({ userId, children }: EmailConfirmGateP
   }, [loadProfile]);
 
   const handleResend = async () => {
+    setResendDone(false);
     setResendLoading(true);
     try {
       await fetch('/api/send-confirm-email', {
@@ -50,9 +53,15 @@ export default function EmailConfirmGate({ userId, children }: EmailConfirmGateP
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, email: undefined }),
       });
+      setResendDone(true);
     } finally {
       setResendLoading(false);
     }
+  };
+
+  const handleGoToLogin = async () => {
+    await onSignOut?.();
+    window.location.href = '/';
   };
 
   if (loading) {
@@ -77,15 +86,29 @@ export default function EmailConfirmGate({ userId, children }: EmailConfirmGateP
           <p className="text-stone-600 text-sm mb-4">
             Hesabınızı {CONFIRM_HOURS} saat içinde onaylamadığınız için kullanıma kapatıldı. E-postanıza gelen onay linkine tıklayarak hesabınızı tekrar açabilirsiniz.
           </p>
-          <p className="text-stone-500 text-xs">
-            Link gelmediyse spam klasörünü kontrol edin veya giriş sayfasından &quot;Onay linkini tekrar gönder&quot; seçeneğini kullanın.
+          <p className="text-stone-500 text-xs mb-4">
+            Link gelmediyse spam klasörünü kontrol edin veya aşağıdaki butonla tekrar gönderin.
           </p>
-          <a
-            href="/"
-            className="inline-block mt-6 px-4 py-2 bg-stone-800 text-white rounded-lg text-sm font-medium hover:bg-stone-700"
-          >
-            Giriş sayfasına dön
-          </a>
+          {resendDone && (
+            <p className="text-green-600 text-sm font-medium mb-3">Onay linki e-postanıza tekrar gönderildi.</p>
+          )}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resendLoading}
+              className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
+            >
+              {resendLoading ? 'Gönderiliyor...' : 'Onay linkini tekrar gönder'}
+            </button>
+            <button
+              type="button"
+              onClick={handleGoToLogin}
+              className="px-4 py-2 bg-stone-800 text-white rounded-lg text-sm font-medium hover:bg-stone-700"
+            >
+              Giriş sayfasına dön
+            </button>
+          </div>
         </div>
       </div>
     );

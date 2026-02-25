@@ -173,7 +173,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   );
 
   return (
-    <EmailConfirmGate userId={authUser.id}>
+    <EmailConfirmGate userId={authUser.id} onSignOut={onLogout}>
     <div className="min-h-screen bg-[#F2F2F0] flex flex-col font-sans text-stone-800 relative selection:bg-brand-200 selection:text-brand-900">
       
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
