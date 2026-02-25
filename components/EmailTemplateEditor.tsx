@@ -1,12 +1,15 @@
 /**
- * E-posta şablon editörü (Easy Email).
+ * E-posta şablon editörü (Easy Email + Extensions).
+ * StandardLayout ile blok listesi (sürükle-bırak) gösterilir.
  * Ref ile getHtml() ve getJson() sunar; Kaydet'te HTML + JSON API'ye gönderilir.
  */
 import React, { useRef, forwardRef, useImperativeHandle } from 'react';
 import { BlockManager, BasicType, JsonToMjml } from 'easy-email-core';
 import { EmailEditor, EmailEditorProvider } from 'easy-email-editor';
+import { StandardLayout } from 'easy-email-extensions';
 import mjml from 'mjml-browser';
 import 'easy-email-editor/lib/style.css';
+import 'easy-email-extensions/lib/style.css';
 
 export interface EmailTemplateEditorRef {
   getHtml: () => string;
@@ -111,7 +114,11 @@ const EmailTemplateEditor = forwardRef<EmailTemplateEditorRef, EmailTemplateEdit
               subject: values.subject ?? '',
               subTitle: values.subTitle ?? '',
             };
-            return <EmailEditor />;
+            return (
+              <StandardLayout compact showSourceCode={false}>
+                <EmailEditor />
+              </StandardLayout>
+            );
           }}
         </EmailEditorProvider>
       </div>

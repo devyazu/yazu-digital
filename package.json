@@ -16,6 +16,7 @@
     "dotenv": "^16.4.5",
     "easy-email-core": "^4.16.5",
     "easy-email-editor": "^4.16.3",
+    "easy-email-extensions": "^4.16.5",
     "express": "^4.21.0",
     "final-form": "^5.0.0",
     "lucide-react": "^0.562.0",
