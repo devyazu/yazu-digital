@@ -1,0 +1,348 @@
+import React, { useState } from 'react';
+import { 
+  ChevronDown, ChevronRight, LayoutGrid, Sparkles,
+  BrainCircuit, Target, MousePointerClick, TrendingUp, 
+  TrendingDown, DollarSign, Eye, ShoppingCart, Palette, 
+  Box, Swords, ShoppingBag, Mail, Globe, PenTool, Zap, Plus,
+  Video, Image, Users, Repeat, Megaphone, Shield, Search, Heart,
+  Crown, Gem, Star, History, Code, Tag, Truck, Store, ShieldCheck,
+  Bot, LifeBuoy, MapPin, Gamepad2, Briefcase, Facebook, Music,
+  PlayCircle, Camera, Shirt, Disc, Film, Edit3, Lock, MessageSquare,
+  Gift, Book, Clipboard, Hash, Layers, GitMerge, Grid, Map,
+  Bell, Sticker
+} from 'lucide-react';
+import { Category, Tool, UserProfile } from '../types';
+
+const getIcon = (name: string, className?: string) => {
+  const props = { className: className || "w-4 h-4" };
+  switch (name) {
+    // Categories
+    case 'Zap': return <Zap {...props} />;
+    case 'Palette': return <Palette {...props} />;
+    case 'Box': return <Box {...props} />;
+    case 'Swords': return <Swords {...props} />;
+    case 'BrainCircuit': return <BrainCircuit {...props} />;
+    case 'Target': return <Target {...props} />;
+    case 'MousePointerClick': return <MousePointerClick {...props} />;
+    case 'TrendingUp': return <TrendingUp {...props} />;
+    case 'TrendingDown': return <TrendingDown {...props} />;
+    case 'DollarSign': return <DollarSign {...props} />;
+    case 'Eye': return <Eye {...props} />;
+    case 'ShoppingCart': return <ShoppingCart {...props} />;
+    case 'Mail': return <Mail {...props} />;
+    case 'Globe': return <Globe {...props} />;
+    case 'Sparkles': return <Sparkles {...props} />;
+    case 'PenTool': return <PenTool {...props} />;
+    case 'ShoppingBag': return <ShoppingBag {...props} />;
+    case 'Video': return <Video {...props} />;
+    case 'Image': return <Image {...props} />;
+    case 'Users': return <Users {...props} />;
+    case 'Repeat': return <Repeat {...props} />;
+    case 'Megaphone': return <Megaphone {...props} />;
+    case 'Shield': return <Shield {...props} />;
+    case 'Search': return <Search {...props} />;
+    case 'Heart': return <Heart {...props} />;
+    case 'PlayCircle': return <PlayCircle {...props} />;
+    
+    // New Platform Icons
+    case 'Code': return <Code {...props} />; // Wordpress/Dev
+    case 'Store': return <Store {...props} />; // Shopify
+    case 'Truck': return <Truck {...props} />; // Amazon
+    case 'Tag': return <Tag {...props} />; // Etsy
+    case 'MapPin': return <MapPin {...props} />; // Local
+    case 'Gamepad2': return <Gamepad2 {...props} />; // Gamification
+    case 'Briefcase': return <Briefcase {...props} />; // B2B
+    case 'Facebook': return <Facebook {...props} />; // Meta
+    case 'Music': return <Music {...props} />; // TikTok
+    case 'Gem': return <Gem {...props} />; // Branding
+
+    // Tool Specific
+    case 'Camera': return <Camera {...props} />;
+    case 'Shirt': return <Shirt {...props} />;
+    case 'Disc': return <Disc {...props} />;
+    case 'Film': return <Film {...props} />;
+    case 'Edit3': return <Edit3 {...props} />;
+    case 'Lock': return <Lock {...props} />;
+    case 'MessageSquare': return <MessageSquare {...props} />;
+    case 'Gift': return <Gift {...props} />;
+    case 'Book': return <Book {...props} />;
+    case 'Clipboard': return <Clipboard {...props} />;
+    case 'Hash': return <Hash {...props} />;
+    case 'Layers': return <Layers {...props} />;
+    case 'GitMerge': return <GitMerge {...props} />;
+    case 'Grid': return <Grid {...props} />;
+    case 'Map': return <Map {...props} />;
+    case 'Bell': return <Bell {...props} />;
+    case 'Sticker': return <Sticker {...props} />;
+
+    default: return <LayoutGrid {...props} />;
+  }
+};
+
+interface SidebarProps {
+  categories: Category[];
+  selectedTool: Tool | null;
+  onSelectTool: (tool: Tool) => void;
+  onSelectCategory: (category: Category) => void;
+  onNavigate: (view: 'home' | 'tool' | 'history' | 'brands-list' | 'brand-connect' | 'settings' | 'admin' | 'sales-agent' | 'support') => void;
+  activeView: string;
+  isOpen: boolean;
+  isDesktopOpen: boolean;
+  favorites: string[];
+  onToggleFavorite: (toolId: string) => void;
+  user: UserProfile;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ 
+  categories, 
+  selectedTool, 
+  onSelectTool, 
+  onSelectCategory, 
+  onNavigate,
+  activeView,
+  isOpen,
+  isDesktopOpen,
+  favorites,
+  onToggleFavorite,
+  user
+}) => {
+  // Default expanded categories
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(['cat-visual', 'cat-ugc', 'cat-copy']));
+  // Pagination state
+  const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
+
+  const toggleCategory = (catId: string) => {
+    const newSet = new Set(expandedCats);
+    if (newSet.has(catId)) {
+      newSet.delete(catId);
+    } else {
+      newSet.add(catId);
+    }
+    setExpandedCats(newSet);
+  };
+
+  const handleCategoryClick = (e: React.MouseEvent, category: Category) => {
+    e.stopPropagation();
+    onSelectCategory(category);
+    // REMOVED: toggleCategory(category.id); -> Only toggle on arrow click
+  };
+
+  const handleToggleClick = (e: React.MouseEvent, catId: string) => {
+    e.stopPropagation();
+    toggleCategory(catId);
+  }
+
+  const handleLoadMore = (e: React.MouseEvent, catId: string) => {
+    e.stopPropagation();
+    setVisibleCounts(prev => ({
+      ...prev,
+      [catId]: (prev[catId] || 4) + 4
+    }));
+  };
+
+  const getFavoriteTools = () => {
+    const allTools = categories.flatMap(c => c.tools);
+    return allTools.filter(t => favorites.includes(t.id));
+  };
+
+  const sidebarClasses = `
+    fixed inset-y-0 left-0 z-30 bg-white/80 backdrop-blur-xl border-r border-white/40 shadow-[4px_0_24px_rgba(0,0,0,0.02)]
+    transition-all duration-300 ease-in-out
+    ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full w-72'}
+    lg:translate-x-0 lg:static lg:inset-auto lg:h-[calc(100vh-64px)] overflow-y-auto flex flex-col
+    ${isDesktopOpen ? 'lg:w-72' : 'lg:w-0 lg:overflow-hidden lg:border-none lg:p-0'}
+  `;
+
+  return (
+    <aside className={sidebarClasses}>
+      
+      {/* 1. History & Favorites Header */}
+      <div className="px-4 py-6 space-y-4 border-b border-stone-100 min-w-[288px] lg:min-w-0">
+        
+        {/* History Button */}
+        <button 
+          onClick={() => onNavigate('history')}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeView === 'history' ? 'bg-stone-800 text-white shadow-lg' : 'bg-white border border-stone-200 text-stone-600 hover:border-brand-300 hover:text-brand-600'}`}
+        >
+          <History className="w-4 h-4" />
+          <span>Chat Archive</span>
+        </button>
+
+        {/* Favorites Section */}
+        {favorites.length > 0 && (
+          <div className="animate-in fade-in slide-in-from-top-2">
+             <h2 className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2 mb-2 px-2">
+               <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+               Favorites
+             </h2>
+             <div className="space-y-1">
+               {getFavoriteTools().map(tool => (
+                 <button
+                   key={`fav-${tool.id}`}
+                   onClick={() => onSelectTool(tool)}
+                   className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-[13px] rounded-lg transition-all ${selectedTool?.id === tool.id ? 'bg-brand-50 text-brand-700 font-medium' : 'text-stone-600 hover:bg-stone-50'}`}
+                 >
+                   <span className="truncate flex-1">{tool.name}</span>
+                   <div 
+                      onClick={(e) => { e.stopPropagation(); onToggleFavorite(tool.id); }}
+                      className="cursor-pointer p-1 hover:bg-stone-200 rounded-full"
+                   >
+                     <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                   </div>
+                 </button>
+               ))}
+             </div>
+          </div>
+        )}
+      </div>
+      
+      {/* 2. Tool Categories */}
+      <div className="flex-1 overflow-y-auto pb-4 space-y-1 pt-4 min-w-[288px] lg:min-w-0">
+        <div className="px-6 mb-2">
+           <h2 className="text-xs font-bold text-stone-400 uppercase tracking-wider">Platform Tools</h2>
+        </div>
+
+        {categories.map((category) => {
+          const isExpanded = expandedCats.has(category.id);
+          const isActiveCategory = selectedTool && category.tools.find(t => t.id === selectedTool.id);
+          const currentLimit = visibleCounts[category.id] || 5;
+          const displayTools = category.tools.slice(0, currentLimit);
+          const hasMore = category.tools.length > currentLimit;
+          
+          return (
+            <div key={category.id} className="px-3">
+              <div 
+                className={`
+                  w-full flex items-center justify-between p-2 rounded-xl transition-all duration-200 cursor-pointer
+                  ${isActiveCategory ? 'bg-white shadow-sm ring-1 ring-stone-100' : 'hover:bg-white/50 hover:shadow-sm'}
+                `}
+                onClick={(e) => handleCategoryClick(e, category)}
+              >
+                {/* Clickable Area for Navigation */}
+                <div className="flex items-center gap-3 flex-1 text-left">
+                  <div className={`p-1.5 rounded-lg ${isActiveCategory ? 'bg-brand-50 text-brand-600' : 'bg-stone-100 text-stone-500'}`}>
+                    {getIcon(category.iconName)}
+                  </div>
+                  <span className={`text-sm font-semibold ${isActiveCategory ? 'text-stone-800' : 'text-stone-600'}`}>
+                    {category.name}
+                  </span>
+                </div>
+
+                {/* Toggle Icon - SEPARATE BUTTON */}
+                <div 
+                    className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded-md transition-colors"
+                    onClick={(e) => handleToggleClick(e, category.id)}
+                >
+                  {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                </div>
+              </div>
+
+              {/* Tools List */}
+              <div 
+                className={`
+                  overflow-hidden transition-all duration-300 ease-in-out
+                  ${isExpanded ? 'max-h-[800px] opacity-100 mt-1' : 'max-h-0 opacity-0'}
+                `}
+              >
+                <div className="pl-3 relative ml-4 border-l border-stone-200/60 space-y-0.5 py-1">
+                  {displayTools.map((tool) => {
+                    const isFav = favorites.includes(tool.id);
+                    return (
+                      <div
+                        key={tool.id}
+                        className={`group flex items-center justify-between pr-2 rounded-lg transition-all ${
+                          selectedTool?.id === tool.id
+                            ? 'bg-brand-50/80'
+                            : 'hover:bg-stone-100/50'
+                        }`}
+                      >
+                        <button
+                          onClick={() => onSelectTool(tool)}
+                          className={`flex-1 text-left flex items-center gap-2 pl-4 py-2 text-[13px] ${
+                            selectedTool?.id === tool.id
+                              ? 'text-brand-700 font-medium'
+                              : 'text-stone-500 group-hover:text-stone-800'
+                          }`}
+                        >
+                          <div className="opacity-70">{getIcon(tool.iconName, "w-3 h-3")}</div>
+                          <span className="truncate">{tool.name}</span>
+                          
+                          {/* Access Level Badge */}
+                          {tool.accessLevel !== 'basic' && (
+                             <span title={tool.accessLevel === 'premium' ? 'Premium Tool' : 'Pro Tool'}>
+                               {tool.accessLevel === 'premium' ? (
+                                 <Gem size={12} className="text-purple-600 fill-purple-100" />
+                               ) : (
+                                 <Crown size={12} className="text-brand-600 fill-brand-100" />
+                               )}
+                             </span>
+                          )}
+                        </button>
+                        
+                        {/* Favorite Star (Visible on hover or if active) */}
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleFavorite(tool.id);
+                          }}
+                          className={`p-1 rounded-full transition-all ${isFav ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 text-stone-300 hover:text-yellow-400'}`}
+                        >
+                           <Star size={12} className={isFav ? "fill-yellow-400 text-yellow-400" : ""} />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Load More Button */}
+                  {hasMore && (
+                    <button 
+                      onClick={(e) => handleLoadMore(e, category.id)}
+                      className="w-full text-left flex items-center gap-1 pl-4 py-2 text-[11px] font-medium text-brand-600 hover:underline hover:text-brand-700 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" /> Load more
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer Actions */}
+      <div className="p-4 border-t border-stone-200 space-y-2 min-w-[288px] lg:min-w-0">
+         {/* Sales Agent Button */}
+         <button 
+          onClick={() => onNavigate('sales-agent')}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-bold transition-all border mb-2 ${activeView === 'sales-agent' ? 'bg-gradient-to-r from-brand-600 to-orange-500 text-white border-transparent shadow-lg' : 'bg-white border-brand-200 text-brand-700 hover:bg-brand-50'}`}
+         >
+          <div className="flex items-center gap-2">
+              <Bot className="w-5 h-5" />
+              <span>AI Sales Agent</span>
+          </div>
+          {activeView !== 'sales-agent' && <span className="bg-brand-100 text-brand-700 text-[9px] px-1.5 py-0.5 rounded uppercase">New</span>}
+         </button>
+
+         {/* Support */}
+         <button 
+            onClick={() => onNavigate('support')}
+            className="w-full flex items-center justify-center gap-2 py-2 text-stone-500 hover:text-stone-800 hover:bg-stone-50 rounded-lg text-sm font-medium transition-all"
+         >
+           <LifeBuoy className="w-4 h-4" /> Help & Support
+         </button>
+
+         {/* Admin */}
+         {user.role === 'admin' && (
+           <button 
+             onClick={() => onNavigate('admin')}
+             className="w-full flex items-center justify-center gap-2 py-3 bg-stone-900 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-stone-800 transition-all"
+           >
+             <ShieldCheck className="w-4 h-4" /> Admin Panel
+           </button>
+         )}
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;
