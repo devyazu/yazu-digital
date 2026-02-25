@@ -1,6 +1,6 @@
-# www.yazu.digital — Adım Adım Canlıya Alma Rehberi
+# app.yazu.digital — Adım Adım Canlıya Alma Rehberi
 
-Bu rehberde **sadece senin yapacakların** var. Her adımda tek bir işlem yapacaksın. Takıldığın yerde dur, ekranda ne gördüğünü yaz, devam edelim.
+Bu rehberde **sadece senin yapacakların** var. Uygulama **app.yazu.digital** adresinde çalışacak. Her adımda tek bir işlem yapacaksın. Takıldığın yerde dur, ekranda ne gördüğünü yaz, devam edelim.
 
 ---
 
@@ -142,10 +142,10 @@ Eğer henüz **yazu.digital** almadıysan, bir domain satıcısından (örn. nam
 1. **vercel.com** → giriş yap → **yazu-digital** projesini aç.
 2. Üstten **Settings** sekmesine tıkla.
 3. Sol menüden **Domains** seç.
-4. “Add” veya domain yazılan kutuya **www.yazu.digital** yaz.
+4. “Add” veya domain yazılan kutuya **app.yazu.digital** yaz (uygulama bu subdomain’de çalışacak).
 5. **Add** tıkla.
 6. Vercel sana birkaç satır **DNS kaydı** gösterecek. Örnek:
-   - **CNAME** → **www** → **cname.vercel-dns.com**
+   - **CNAME** → **app** → **cname.vercel-dns.com**
    veya
    - **A** → **@** → **76.76.21.21**
 
@@ -157,11 +157,11 @@ Bu satırları **kopyala** veya ekranda açık bırak; bir sonraki adımda domai
 
 1. Alan adını aldığın sitede (GoDaddy, Namecheap, vb.) **yazu.digital** için **DNS / Nameservers / Manage DNS** benzeri bir sayfayı aç.
 2. Vercel’in söylediği kayıtları **aynen** ekle:
-   - **CNAME** dediyse: Host/Name kısmına **www** (veya sadece www), Value/Point to kısmına **cname.vercel-dns.com** yaz.
+   - **app.yazu.digital** için **CNAME** dediyse: Host/Name kısmına **app**, Value/Point to kısmına **cname.vercel-dns.com** yaz.
    - **A** dediyse: Host **@**, Value **76.76.21.21** (Vercel’de yazan numarayı kullan).
 3. **Kaydet** / **Save** tıkla.
 
-DNS’in yayılması 5 dakika – birkaç saat sürebilir. Vercel’de **Domains** sayfasında www.yazu.digital’in yanında yeşil tik çıkınca bağlantı tamamdır. Tarayıcıda **https://www.yazu.digital** yazıp site açılıyorsa bu bölüm tamam.
+DNS’in yayılması 5 dakika – birkaç saat sürebilir. Vercel’de **Domains** sayfasında app.yazu.digital’in yanında yeşil tik çıkınca bağlantı tamamdır. Tarayıcıda **https://app.yazu.digital** yazıp site açılıyorsa bu bölüm tamam.
 
 ---
 
@@ -207,7 +207,7 @@ Her satırda **Add** veya **Save** tıkla. **Environment** kısmında **Producti
 
 3. Üstteki **Deployments** sekmesine geç. En üstteki deployment’ın sağındaki **⋯** (üç nokta) → **Redeploy** tıkla. “Redeploy” onayla.
 
-Bir iki dakika sonra deployment biter. **www.yazu.digital** adresini yenile: giriş sayfası gelmeli; kayıt ol / giriş yap deneyebilirsin. Bir araç seçip “Generate” dene; AI cevap veriyorsa her şey tamam.
+Bir iki dakika sonra deployment biter. **app.yazu.digital** adresini yenile: giriş sayfası gelmeli; kayıt ol / giriş yap deneyebilirsin. Bir araç seçip “Generate” dene; AI cevap veriyorsa her şey tamam.
 
 ---
 
@@ -230,7 +230,7 @@ Bundan sonra sitede giriş yapıp bir araçta “Generate” dediğinde, o kulla
 
 1. **A:** GitHub hesabı → yazu-digital repo → kodu push et.
 2. **B:** Vercel hesabı → GitHub’dan yazu-digital’i import et → Deploy.
-3. **C:** yazu.digital domain’ini Vercel’e ekle → Domain satıcısında DNS’i Vercel’in söylediği gibi ayarla.
+3. **C:** app.yazu.digital domain’ini Vercel’e ekle → Domain satıcısında DNS’i Vercel’in söylediği gibi ayarla.
 4. **D:** Supabase’ten URL + anon key, Google’dan Gemini key al → Vercel’de Environment Variables’a ekle → Redeploy.
 5. **E:** Supabase SQL Editor’de 001_chat_archive.sql’i çalıştır.
 

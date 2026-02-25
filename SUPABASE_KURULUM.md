@@ -53,3 +53,16 @@ Chat arşivini saklamak için Supabase’de bir tablo oluşturun:
 Bu tablo `auth.users` ile ilişkilidir: Giriş sistemini (Supabase Auth) açtığınızda her kullanıcının ID’si orada olacak ve `chat_archive.user_id` ile eşleşecek.
 
 **Auth (e-posta ile giriş):** Uygulama Supabase Auth kullanıyor. Dashboard’da **Authentication** → **Providers** → **Email**’in açık ve “Confirm email” ayarının ihtiyacınıza göre (açık/kapalı) olduğundan emin olun. Kayıt olan kullanıcılar `auth.users` tablosuna eklenir; chat archive bu kullanıcı ID’leriyle kaydedilir.
+
+---
+
+## E-posta onay linki localhost’a gidiyorsa (canlı site için düzeltme)
+
+E-posta onay linkine tıkladığında **localhost:3000** açılıyor veya “bağlanamıyor” hatası alıyorsan, Supabase’te yönlendirme adresi hâlâ localhost’tur. Canlı sitede **app.yazu.digital** kullanıyorsan şunu yap:
+
+1. Supabase Dashboard → **Authentication** → **URL Configuration**.
+2. **Site URL** kutusuna şunu yaz: **https://app.yazu.digital**
+3. **Redirect URLs** listesine şunu ekle: **https://app.yazu.digital/**
+4. **Save** tıkla.
+
+Bundan sonra gönderilen e-posta onay linkleri **app.yazu.digital**’e yönlendirir. Eski link artık geçersiz sayılır; gerekirse tekrar “Kayıt ol” deyip yeni maildeki linke tıklayabilirsin.

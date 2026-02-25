@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
@@ -11,7 +11,8 @@ import BrandConnectView from './components/BrandConnectView';
 import SettingsView from './components/SettingsView';
 import CategoryView from './components/CategoryView';
 import UpgradeModal from './components/UpgradeModal';
-import AdminView from './components/AdminView';
+import AdminGate from './components/AdminGate';
+import EmailConfirmGate from './components/EmailConfirmGate';
 import SupportView from './components/SupportView';
 import SalesAgentView from './components/SalesAgentView';
 import LoginPage from './components/LoginPage';
@@ -63,7 +64,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const [searchQuery, setSearchQuery] = useState('');
 
   // Navigation State
-  const [view, setView] = useState<'home' | 'tool' | 'category' | 'history' | 'brands-list' | 'brand-connect' | 'settings' | 'admin' | 'sales-agent' | 'support'>('home');
+  const [view, setView] = useState<'home' | 'tool' | 'category' | 'history' | 'brands-list' | 'brand-connect' | 'settings' | 'sales-agent' | 'support'>('home');
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   
@@ -171,18 +172,8 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     [categories, searchQuery]
   );
 
-  // If Admin View is active
-  if (view === 'admin') {
-    return (
-      <AdminView 
-        categories={categories}
-        setCategories={setCategories}
-        onExit={() => setView('home')}
-      />
-    );
-  }
-
   return (
+    <EmailConfirmGate userId={authUser.id}>
     <div className="min-h-screen bg-[#F2F2F0] flex flex-col font-sans text-stone-800 relative selection:bg-brand-200 selection:text-brand-900">
       
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -305,13 +296,34 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         />
       )}
     </div>
+    </EmailConfirmGate>
   );
 }
 
-const App: React.FC = () => (
-  <AuthProvider>
-    <AppContent />
-  </AuthProvider>
-);
+function usePathname() {
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+  useEffect(() => {
+    const onPop = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  return pathname;
+}
+
+const App: React.FC = () => {
+  const pathname = usePathname();
+  if (pathname === '/admin') {
+    return (
+      <AuthProvider>
+        <AdminGate />
+      </AuthProvider>
+    );
+  }
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
 
 export default App;

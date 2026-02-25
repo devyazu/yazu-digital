@@ -44,8 +44,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     if (!supabase) return { error: new Error('Supabase not configured') };
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error: error ?? null };
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return { error };
+    if (data?.user) {
+      try {
+        await fetch('/api/send-confirm-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: data.user.id, email: data.user.email ?? email }),
+        });
+      } catch (_) {}
+    }
+    return { error: null };
   };
 
   const signOut = async () => {

@@ -5,8 +5,7 @@ import {
   TrendingDown, DollarSign, Eye, ShoppingCart, Palette, 
   Box, Swords, ShoppingBag, Mail, Globe, PenTool, Zap, Plus,
   Video, Image, Users, Repeat, Megaphone, Shield, Search, Heart,
-  Crown, Gem, Star, History, Code, Tag, Truck, Store, ShieldCheck,
-  Bot, LifeBuoy, MapPin, Gamepad2, Briefcase, Facebook, Music,
+  Crown, Gem, Star, History, Code, Tag, Truck, Store,   Bot, LifeBuoy, MapPin, Gamepad2, Briefcase, Facebook, Music,
   PlayCircle, Camera, Shirt, Disc, Film, Edit3, Lock, MessageSquare,
   Gift, Book, Clipboard, Hash, Layers, GitMerge, Grid, Map,
   Bell, Sticker
@@ -84,7 +83,7 @@ interface SidebarProps {
   selectedTool: Tool | null;
   onSelectTool: (tool: Tool) => void;
   onSelectCategory: (category: Category) => void;
-  onNavigate: (view: 'home' | 'tool' | 'history' | 'brands-list' | 'brand-connect' | 'settings' | 'admin' | 'sales-agent' | 'support') => void;
+  onNavigate: (view: 'home' | 'tool' | 'history' | 'brands-list' | 'brand-connect' | 'settings' | 'sales-agent' | 'support') => void;
   activeView: string;
   isOpen: boolean;
   isDesktopOpen: boolean;
@@ -330,16 +329,6 @@ const Sidebar: React.FC<SidebarProps> = ({
          >
            <LifeBuoy className="w-4 h-4" /> Help & Support
          </button>
-
-         {/* Admin */}
-         {user.role === 'admin' && (
-           <button 
-             onClick={() => onNavigate('admin')}
-             className="w-full flex items-center justify-center gap-2 py-3 bg-stone-900 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-stone-800 transition-all"
-           >
-             <ShieldCheck className="w-4 h-4" /> Admin Panel
-           </button>
-         )}
       </div>
     </aside>
   );
