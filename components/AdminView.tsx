@@ -861,6 +861,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
             <div className="flex-1 min-h-0 flex flex-col min-w-0 w-full">
               <EmailTemplateEditor
                 ref={emailEditorRef}
+                initialHtml={editBodyHtml}
                 initialJson={editBodyJson}
                 templateKey={selectedTemplateSlug}
                 className="flex-1 min-h-0 w-full"

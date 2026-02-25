@@ -1,15 +1,9 @@
 /**
- * E-posta şablon editörü (Easy Email).
- * Ref ile getHtml() ve getJson() sunar; Kaydet'te HTML + JSON API'ye gönderilir.
- * Not: easy-email-extensions StandardLayout fullscreen açılışta hata verdiği için
- * şimdilik sadece EmailEditor kullanılıyor; blok listesi easy-email-editor içinde
- * soldaki panel (collapsed: false patch) ile açılabilir.
+ * E-posta şablon editörü (basit HTML + EmailBuilder.js uyumlu).
+ * - İçerik HTML textarea ile düzenlenir; body_json varsa korunur (ileride EmailBuilder editör eklenebilir).
+ * - Ref: getHtml(), getJson(), getInlinedHtml() — AdminView ve API ile uyumlu.
  */
-import React, { useRef, forwardRef, useImperativeHandle } from 'react';
-import { BlockManager, BasicType, JsonToMjml } from 'easy-email-core';
-import { EmailEditor, EmailEditorProvider } from 'easy-email-editor';
-import mjml from 'mjml-browser';
-import 'easy-email-editor/lib/style.css';
+import React, { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 
 export interface EmailTemplateEditorRef {
   getHtml: () => string;
@@ -18,105 +12,47 @@ export interface EmailTemplateEditorRef {
 }
 
 interface EmailTemplateEditorProps {
-  /** Başlangıç içeriği: HTML (legacy, yok sayılır) veya boş → varsayılan blok. */
+  /** Başlangıç HTML (body_html). */
   initialHtml?: string;
-  /** Easy Email JSON (body_json). Varsa editör buna göre yüklenir. */
+  /** Mevcut body_json; sadece HTML düzenleniyorsa aynen korunur. */
   initialJson?: string | null;
-  /** Şablon değişince yeniden mount için key */
   templateKey?: string;
   className?: string;
   fullHeight?: boolean;
 }
 
-const defaultContent =
-  (BlockManager.getBlockByType(BasicType.PAGE)?.create({}) as Record<string, unknown>) ?? {
-    type: BasicType.PAGE,
-    data: { value: {} },
-    attributes: {},
-    children: [],
-  };
-
-function getDefaultData() {
-  return {
-    subject: '',
-    subTitle: '',
-    content: defaultContent,
-  };
-}
-
-function parseInitialData(initialJson: string | null | undefined) {
-  if (!initialJson || typeof initialJson !== 'string') return getDefaultData();
-  try {
-    const parsed = JSON.parse(initialJson) as { subject?: string; subTitle?: string; content?: unknown };
-    if (parsed && typeof parsed === 'object' && parsed.content) {
-      return {
-        subject: parsed.subject ?? '',
-        subTitle: parsed.subTitle ?? '',
-        content: parsed.content,
-      };
-    }
-  } catch {
-    // ignore
-  }
-  return getDefaultData();
-}
-
 const EmailTemplateEditor = forwardRef<EmailTemplateEditorRef, EmailTemplateEditorProps>(
-  function EmailTemplateEditor({ initialJson, templateKey, className, fullHeight }, ref) {
-    const valuesRef = useRef<{ content: unknown; subject: string; subTitle: string }>(getDefaultData());
+  function EmailTemplateEditor({ initialHtml = '', initialJson, templateKey, className, fullHeight }, ref) {
+    const [html, setHtml] = useState(initialHtml);
+    useEffect(() => {
+      setHtml(initialHtml);
+    }, [templateKey, initialHtml]);
 
     useImperativeHandle(
       ref,
       () => ({
-        getHtml: () => {
-          try {
-            const mjmlStr = JsonToMjml({
-              data: valuesRef.current.content as Parameters<typeof JsonToMjml>[0]['data'],
-              mode: 'production',
-            });
-            const result = mjml(mjmlStr as string);
-            return (result as { html?: string })?.html ?? '';
-          } catch (e) {
-            console.warn('EmailTemplateEditor getHtml:', e);
-            return '';
-          }
-        },
-        getJson: () => JSON.stringify(valuesRef.current),
-        getInlinedHtml: () => {
-          try {
-            const mjmlStr = JsonToMjml({
-              data: valuesRef.current.content as Parameters<typeof JsonToMjml>[0]['data'],
-              mode: 'production',
-            });
-            const result = mjml(mjmlStr as string);
-            return (result as { html?: string })?.html ?? '';
-          } catch (e) {
-            console.warn('EmailTemplateEditor getInlinedHtml:', e);
-            return '';
-          }
-        },
+        getHtml: () => html,
+        getJson: () => initialJson ?? '',
+        getInlinedHtml: () => html,
       }),
-      []
+      [html, initialJson]
     );
 
-    const initialData = parseInitialData(initialJson);
-
     return (
-      <div className={className} style={fullHeight ? { minHeight: 0, height: '100%' } : { minHeight: 420 }}>
-        <EmailEditorProvider
-          key={templateKey ?? 'default'}
-          data={initialData as Parameters<typeof EmailEditorProvider>[0]['data']}
-          height={fullHeight ? '100%' : '400px'}
-        >
-          {({ values }) => {
-            valuesRef.current = {
-              content: values.content,
-              subject: values.subject ?? '',
-              subTitle: values.subTitle ?? '',
-            };
-            return <EmailEditor />;
-          }}
-        </EmailEditorProvider>
+      <div
+        className={className}
+        style={fullHeight ? { minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column' } : { minHeight: 420 }}
+      >
+        <div className="flex-1 min-h-0 flex flex-col gap-2 p-4">
+          <label className="text-xs font-bold text-stone-500">İçerik (HTML)</label>
+          <textarea
+            value={html}
+            onChange={(e) => setHtml(e.target.value)}
+            placeholder="<p>Merhaba {{user_email}}</p> ..."
+            className="flex-1 min-h-[200px] w-full font-mono text-sm border border-stone-200 rounded-lg p-3 resize-y focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+            spellCheck={false}
+          />
+        </div>
       </div>
     );
   }

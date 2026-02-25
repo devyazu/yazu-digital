@@ -30,7 +30,7 @@ Bu dokümanda tüm mail akışları, admin yönetim paneli, otomasyon ve editör
 
 Tüm bu mailler **veritabanındaki şablonlardan** (subject + HTML body) alınacak; admin panelden düzenlenebilecek.
 
-**Editör:** E-posta şablonları **Easy Email** (drag-and-drop, MJML tabanlı) ile düzenlenir. İçerik `body_json` olarak saklanır; gönderimde HTML’e çevrilir (`body_html`).
+**Editör:** E-posta şablonları **EmailBuilder.js** (@usewaypoint/email-builder) ile uyumlu. İçerik admin panelde **HTML textarea** ile düzenlenir; `body_html` ve isteğe bağlı `body_json` (EmailBuilder formatı) saklanır. Gönderimde: `body_json` varsa `renderToStaticMarkup` ile HTML’e çevrilir, yoksa `body_html` kullanılır.
 
 **Görseller:** E-postada görsel kullanmak için Image bloğuna **URL** (https://…) girin. Yükleme (upload) base64 üretir; sistem güvenlik nedeniyle data URL’leri e-postadan çıkarır, bu yüzden yüklenen görsel mailde görünmez. Görselin public bir adresi olmalı.
 

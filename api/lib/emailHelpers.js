@@ -31,7 +31,7 @@ export function replacePlaceholders(text, placeholders = {}) {
 export async function getTemplate(supabase, slug) {
   const { data, error } = await supabase
     .from('email_templates')
-    .select('subject, body_html, from_name, is_active')
+    .select('subject, body_html, body_json, from_name, is_active')
     .eq('slug', slug)
     .eq('is_active', true)
     .maybeSingle();
@@ -75,11 +75,37 @@ function getFromAddress(fromName) {
   return `${fromName} ${email}`;
 }
 
+/** EmailBuilder.js JSON ise HTML'e çevirir; değilse null döner. */
+async function renderEmailBuilderDoc(bodyJson) {
+  if (!bodyJson || typeof bodyJson !== 'string') return null;
+  let doc;
+  try {
+    doc = JSON.parse(bodyJson);
+  } catch {
+    return null;
+  }
+  if (!doc || typeof doc !== 'object' || !doc.root) return null;
+  try {
+    const { renderToStaticMarkup } = await import('@usewaypoint/email-builder');
+    return renderToStaticMarkup(doc, { rootBlockId: 'root' });
+  } catch {
+    return null;
+  }
+}
+
 export async function sendTemplatedEmail(supabase, { slug, to, placeholders = {} }) {
   const t = await getTemplate(supabase, slug);
   if (!t) throw new Error(`Template not found: ${slug}`);
   const subject = replacePlaceholders(t.subject, placeholders);
-  let html = replacePlaceholders(t.body_html, placeholders);
+  let html = null;
+  if (t.body_json) {
+    html = await renderEmailBuilderDoc(t.body_json);
+  }
+  if (!html) {
+    html = replacePlaceholders(t.body_html || '', placeholders);
+  } else {
+    html = replacePlaceholders(html, placeholders);
+  }
   html = stripDataUrlsFromHtml(html);
   const from = getFromAddress(t.from_name);
   await sendMail({ to, subject, html, from });
