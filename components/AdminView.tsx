@@ -585,7 +585,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       <div className="h-16 bg-brand-600 text-white flex items-center justify-between px-6 shadow-md z-20">
         <div className="flex items-center gap-3">
            <div className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Admin Mode</div>
-           <h2 className="font-bold text-lg">YAZU Commander</h2>
+           <h2 className="font-bold text-lg">YAZU Coommander</h2>
         </div>
         <button onClick={onExit} className="text-sm text-stone-400 hover:text-white flex items-center gap-2">
            Exit to App <Settings className="w-4 h-4" />
