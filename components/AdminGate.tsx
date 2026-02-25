@@ -10,6 +10,7 @@ import type { Category } from '../types';
 export default function AdminGate() {
   const { user, loading: authLoading, signIn, signOut, isConfigured } = useAuth();
   const [adminCheck, setAdminCheck] = useState<boolean | null>(null);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
 
   useEffect(() => {
     if (!user?.email) {
@@ -65,7 +66,6 @@ export default function AdminGate() {
     );
   }
 
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   return (
     <AdminView
       categories={categories}
