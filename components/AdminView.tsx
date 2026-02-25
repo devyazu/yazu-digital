@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Category, Tool, UserProfile, AdminStats } from '../types';
 import { 
   LayoutDashboard, Users, Wrench, FolderOpen, 
   Search, Plus, Edit, Trash2, CheckCircle, XCircle, 
   BarChart3, DollarSign, Zap, Play, Settings, TrendingUp,
-  Activity, ArrowUpRight, Globe
+  Activity, ArrowUpRight, Globe, Loader2
 } from 'lucide-react';
 import { MOCK_USERS_LIST } from '../data';
+import { useAuth } from '../context/AuthContext';
+
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  created_at: string;
+  is_admin: boolean;
+}
 
 interface AdminViewProps {
   categories: Category[];
@@ -15,16 +23,34 @@ interface AdminViewProps {
 }
 
 const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit }) => {
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics'>('tools');
   const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS_LIST);
+  const [realUsers, setRealUsers] = useState<AdminUserRow[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersSearch, setUsersSearch] = useState('');
   
   // Tool Editor State
   const [isEditingTool, setIsEditingTool] = useState(false);
   const [editingTool, setEditingTool] = useState<Partial<Tool>>({});
   
-  // Mock Stats
+  useEffect(() => {
+    if (activeTab !== 'users' || !session?.access_token) return;
+    setUsersLoading(true);
+    fetch('/api/list-users', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load users'))))
+      .then((data) => {
+        setRealUsers(data.users || []);
+      })
+      .catch(() => setRealUsers([]))
+      .finally(() => setUsersLoading(false));
+  }, [activeTab, session?.access_token]);
+
+  // Mock Stats (tools/categories için mock users kullanılıyor; analytics sayısı realUsers ile güncellenebilir)
   const stats: AdminStats = {
-    totalUsers: users.length,
+    totalUsers: realUsers.length || users.length,
     activeSubs: users.filter(u => u.tier !== 'basic').length,
     totalRevenue: 12540,
     totalGenerations: 45200,
@@ -257,70 +283,73 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     </div>
   );
 
-  // --- USERS MANAGEMENT VIEW ---
+  // --- USERS MANAGEMENT VIEW (Supabase gerçek kullanıcılar) ---
+  const filteredRealUsers = usersSearch.trim()
+    ? realUsers.filter((u) => u.email.toLowerCase().includes(usersSearch.trim().toLowerCase()))
+    : realUsers;
+
   const renderUsers = () => (
     <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in">
       <div className="p-4 border-b border-stone-200 flex justify-between items-center bg-stone-50">
-        <h3 className="font-bold text-stone-800">User Management</h3>
+        <h3 className="font-bold text-stone-800">Kullanıcı Yönetimi</h3>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-          <input type="text" placeholder="Search users..." className="pl-9 pr-4 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:border-brand-500" />
+          <input
+            type="text"
+            placeholder="E-posta ile ara..."
+            value={usersSearch}
+            onChange={(e) => setUsersSearch(e.target.value)}
+            className="pl-9 pr-4 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:border-brand-500"
+          />
         </div>
       </div>
-      <table className="w-full text-left text-sm">
-        <thead className="bg-stone-100 text-stone-500 font-medium">
-          <tr>
-            <th className="px-6 py-3">User</th>
-            <th className="px-6 py-3">Role</th>
-            <th className="px-6 py-3">Plan</th>
-            <th className="px-6 py-3">Credits</th>
-            <th className="px-6 py-3 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-stone-100">
-          {users.map(user => (
-            <tr key={user.id} className="hover:bg-stone-50">
-              <td className="px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-stone-200 overflow-hidden">
-                    <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-stone-800">{user.name}</div>
-                    <div className="text-xs text-stone-400">{user.email}</div>
-                  </div>
-                </div>
-              </td>
-              <td className="px-6 py-4">
-                <select 
-                  value={user.role} 
-                  onChange={(e) => handleUpdateUser(user.id, { role: e.target.value as any })}
-                  className={`text-xs font-bold px-2 py-1 rounded border-none focus:ring-0 cursor-pointer ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-stone-100 text-stone-600'}`}
-                >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </td>
-              <td className="px-6 py-4">
-                <select 
-                  value={user.tier} 
-                  onChange={(e) => handleUpdateUser(user.id, { tier: e.target.value as any })}
-                  className="text-xs border rounded px-2 py-1"
-                >
-                  <option value="basic">Basic</option>
-                  <option value="pro">Pro</option>
-                  <option value="premium">Premium</option>
-                </select>
-              </td>
-              <td className="px-6 py-4 text-stone-600 font-mono">{user.credits.used} / {user.credits.total}</td>
-              <td className="px-6 py-4 text-right">
-                <button className="text-xs text-brand-600 hover:underline mr-3" title="Simulate Login">Ghost Login</button>
-                <button className="text-xs text-red-500 hover:underline">Ban</button>
-              </td>
+      {usersLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+        </div>
+      ) : (
+        <table className="w-full text-left text-sm">
+          <thead className="bg-stone-100 text-stone-500 font-medium">
+            <tr>
+              <th className="px-6 py-3">E-posta</th>
+              <th className="px-6 py-3">Kayıt tarihi</th>
+              <th className="px-6 py-3">Rol</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-stone-100">
+            {filteredRealUsers.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-6 py-8 text-center text-stone-400">
+                  {realUsers.length === 0 && !usersLoading ? 'Henüz kullanıcı yok.' : 'Eşleşen kullanıcı yok.'}
+                </td>
+              </tr>
+            ) : (
+              filteredRealUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-stone-50">
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-stone-800">{user.email}</div>
+                    <div className="text-xs text-stone-400 font-mono">{user.id.slice(0, 8)}…</div>
+                  </td>
+                  <td className="px-6 py-4 text-stone-600">
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString('tr-TR', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }) : '—'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`text-xs font-bold px-2 py-1 rounded ${user.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-stone-100 text-stone-600'}`}>
+                      {user.is_admin ? 'Admin' : 'User'}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 
@@ -532,10 +561,10 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   return (
     <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#F2F2F0]">
       {/* Admin Header */}
-      <div className="h-16 bg-stone-900 text-white flex items-center justify-between px-6 shadow-md z-20">
+      <div className="h-16 bg-brand-600 text-white flex items-center justify-between px-6 shadow-md z-20">
         <div className="flex items-center gap-3">
-           <div className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Admin Mode</div>
-           <h2 className="font-bold text-lg">SalesMind Command Center</h2>
+           <div className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Admin Mode</div>
+           <h2 className="font-bold text-lg">YAZU Command Center</h2>
         </div>
         <button onClick={onExit} className="text-sm text-stone-400 hover:text-white flex items-center gap-2">
            Exit to App <Settings className="w-4 h-4" />
