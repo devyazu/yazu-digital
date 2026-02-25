@@ -1,13 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, AccessLevel } from '../types';
-import { User, CreditCard, Shield, Bell, Check, Zap, AlertCircle, Plus, MapPin, Building } from 'lucide-react';
+import { User, CreditCard, Shield, Bell, Check, Zap, AlertCircle, Plus, MapPin, Building, Loader2 } from 'lucide-react';
+import { getProfile, updateProfile, uploadAvatar, type Profile } from '../services/profileService';
+
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&q=80';
 
 interface SettingsViewProps {
+  authUser: { id: string; email?: string };
   user: UserProfile;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'billing'>('profile');
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getProfile(authUser.id).then(({ profile: p }) => {
+      if (!cancelled && p) {
+        setProfile(p);
+        setFullName(p.full_name ?? '');
+        setCompanyName(p.company_name ?? '');
+        setJobTitle(p.job_title ?? '');
+      }
+      if (!cancelled) setProfileLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [authUser.id]);
 
   const plans = [
     {
@@ -36,50 +62,100 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
     }
   ];
 
-  const renderProfile = () => (
-    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-      <div className="flex items-center gap-6">
-        <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white shadow-lg bg-stone-200">
-          <img 
-            src={user.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&q=80"} 
-            alt="Avatar" 
-            className="w-full h-full object-cover" 
-          />
+  const handleSaveProfile = async () => {
+    setMessage(null);
+    setSaving(true);
+    const { error } = await updateProfile(authUser.id, {
+      full_name: fullName.trim() || null,
+      company_name: companyName.trim() || null,
+      job_title: jobTitle.trim() || null,
+    });
+    setSaving(false);
+    if (error) {
+      setMessage({ type: 'err', text: error.message || 'Kaydedilemedi.' });
+      return;
+    }
+    setProfile((p) => (p ? { ...p, full_name: fullName.trim() || null, company_name: companyName.trim() || null, job_title: jobTitle.trim() || null } : p));
+    setMessage({ type: 'ok', text: 'Kaydedildi.' });
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !authUser.id) return;
+    setMessage(null);
+    setAvatarUploading(true);
+    const { url, error } = await uploadAvatar(authUser.id, file);
+    setAvatarUploading(false);
+    e.target.value = '';
+    if (error) {
+      setMessage({ type: 'err', text: error.message || 'Avatar yüklenemedi.' });
+      return;
+    }
+    if (url) {
+      setProfile((p) => (p ? { ...p, avatar_url: url } : p));
+      setMessage({ type: 'ok', text: 'Avatar güncellendi.' });
+    }
+  };
+
+  const renderProfile = () => {
+    if (profileLoading) {
+      return (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
         </div>
-        <div>
-          <button className="px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 text-stone-700 shadow-sm transition-all">
-            Change Avatar
+      );
+    }
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        {message && (
+          <div className={`px-4 py-2 rounded-lg text-sm ${message.type === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+            {message.text}
+          </div>
+        )}
+        <div className="flex items-center gap-6">
+          <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white shadow-lg bg-stone-200">
+            <img
+              src={profile?.avatar_url || DEFAULT_AVATAR}
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div>
+            <label className="inline-block px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 text-stone-700 shadow-sm transition-all cursor-pointer">
+              {avatarUploading ? 'Yükleniyor...' : 'Change Avatar'}
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleAvatarChange} disabled={avatarUploading} />
+            </label>
+            <p className="text-xs text-stone-400 mt-2">JPG, GIF veya PNG. Maks. 1MB.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Full Name</label>
+            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Ad Soyad" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Email Address</label>
+            <input type="email" value={authUser.email ?? ''} readOnly className="w-full px-4 py-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Company Name</label>
+            <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Şirket adı" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Job Title</label>
+            <input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="İş unvanı" />
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-stone-200 flex justify-end">
+          <button onClick={handleSaveProfile} disabled={saving} className="px-6 py-2 bg-brand-600 text-white font-medium rounded-lg hover:bg-brand-700 transition-colors shadow-sm disabled:opacity-50">
+            {saving ? 'Kaydediliyor...' : 'Save Changes'}
           </button>
-          <p className="text-xs text-stone-400 mt-2">JPG, GIF or PNG. Max 1MB.</p>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Full Name</label>
-          <input type="text" defaultValue={user.name} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Email Address</label>
-          <input type="email" defaultValue="demo@marketerai.com" className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Company Name</label>
-          <input type="text" defaultValue="Acme Corp" className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Job Title</label>
-          <input type="text" defaultValue="Marketing Director" className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" />
-        </div>
-      </div>
-
-      <div className="pt-6 border-t border-stone-200 flex justify-end">
-        <button className="px-6 py-2 bg-brand-600 text-white font-medium rounded-lg hover:bg-brand-700 transition-colors shadow-sm">
-          Save Changes
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderSubscription = () => (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">

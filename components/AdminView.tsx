@@ -14,6 +14,10 @@ export interface AdminUserRow {
   email: string;
   created_at: string;
   is_admin: boolean;
+  full_name: string | null;
+  company_name: string | null;
+  job_title: string | null;
+  avatar_url: string | null;
 }
 
 interface AdminViewProps {
@@ -301,7 +305,14 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
 
   // --- USERS MANAGEMENT VIEW (Supabase gerçek kullanıcılar) ---
   const filteredRealUsers = usersSearch.trim()
-    ? realUsers.filter((u) => u.email.toLowerCase().includes(usersSearch.trim().toLowerCase()))
+    ? realUsers.filter((u) => {
+        const q = usersSearch.trim().toLowerCase();
+        return (
+          u.email.toLowerCase().includes(q) ||
+          (u.full_name || '').toLowerCase().includes(q) ||
+          (u.company_name || '').toLowerCase().includes(q)
+        );
+      })
     : realUsers;
 
   const renderUsers = () => (
@@ -332,7 +343,9 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
         <table className="w-full text-left text-sm">
           <thead className="bg-stone-100 text-stone-500 font-medium">
             <tr>
+              <th className="px-6 py-3">Kullanıcı</th>
               <th className="px-6 py-3">E-posta</th>
+              <th className="px-6 py-3">Şirket / Unvan</th>
               <th className="px-6 py-3">Kayıt tarihi</th>
               <th className="px-6 py-3">Rol</th>
             </tr>
@@ -340,7 +353,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
           <tbody className="divide-y divide-stone-100">
             {filteredRealUsers.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-stone-400">
+                <td colSpan={5} className="px-6 py-8 text-center text-stone-400">
                   {realUsers.length === 0 && !usersLoading ? 'Henüz kullanıcı yok.' : 'Eşleşen kullanıcı yok.'}
                 </td>
               </tr>
@@ -348,8 +361,26 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
               filteredRealUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-stone-50">
                   <td className="px-6 py-4">
-                    <div className="font-medium text-stone-800">{user.email}</div>
-                    <div className="text-xs text-stone-400 font-mono">{user.id.slice(0, 8)}…</div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-stone-200 shrink-0">
+                        <img
+                          src={user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="font-medium text-stone-800">{user.full_name || '—'}</div>
+                        <div className="text-xs text-stone-400 font-mono">{user.id.slice(0, 8)}…</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-stone-700">{user.email}</div>
+                  </td>
+                  <td className="px-6 py-4 text-stone-600">
+                    <div>{user.company_name || '—'}</div>
+                    <div className="text-xs text-stone-400">{user.job_title || '—'}</div>
                   </td>
                   <td className="px-6 py-4 text-stone-600">
                     {user.created_at ? new Date(user.created_at).toLocaleDateString('tr-TR', {

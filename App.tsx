@@ -268,7 +268,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         )}
 
         {view === 'settings' && (
-          <SettingsView user={MOCK_USER} />
+          <SettingsView authUser={authUser} user={MOCK_USER} />
         )}
 
         {view === 'tool' && selectedTool && (

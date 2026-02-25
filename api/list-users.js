@@ -72,12 +72,26 @@ export default async function handler(req, res) {
       .select('email');
     const adminSet = new Set((adminEmails || []).map((r) => r?.email).filter(Boolean));
 
-    const users = userList.map((u) => ({
-      id: u?.id ?? '',
-      email: u?.email ?? '',
-      created_at: u?.created_at ?? null,
-      is_admin: adminSet.has(u?.email ?? ''),
-    }));
+    const userIds = userList.map((u) => u?.id).filter(Boolean);
+    const { data: profilesRows } = userIds.length
+      ? await supabaseAdmin.from('profiles').select('id, full_name, company_name, job_title, avatar_url').in('id', userIds)
+      : { data: [] };
+    const profileById = new Map((profilesRows || []).map((p) => [p.id, p]));
+
+    const users = userList.map((u) => {
+      const pid = u?.id ?? '';
+      const pro = profileById.get(pid) || {};
+      return {
+        id: pid,
+        email: u?.email ?? '',
+        created_at: u?.created_at ?? null,
+        is_admin: adminSet.has(u?.email ?? ''),
+        full_name: pro.full_name ?? null,
+        company_name: pro.company_name ?? null,
+        job_title: pro.job_title ?? null,
+        avatar_url: pro.avatar_url ?? null,
+      };
+    });
 
     return send(res, 200, { users });
   } catch (err) {
