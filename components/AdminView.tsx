@@ -46,10 +46,11 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
         const data = await r.json().catch(() => ({}));
         if (!r.ok) {
           const msg = data?.error || `Hata ${r.status}`;
+          const detail = data?.detail ? ` (${data.detail})` : '';
           if (r.status === 401) throw new Error('Oturum geçersiz. Çıkış yapıp tekrar giriş yapın.');
           if (r.status === 403) throw new Error('Admin yetkisi gerekli.');
           if (r.status === 503) throw new Error('Sunucu ayarları eksik. Vercel\'de SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY tanımlı olmalı.');
-          throw new Error(msg);
+          throw new Error(msg + detail);
         }
         return data;
       })
