@@ -7,7 +7,11 @@ import AdminView from './AdminView';
 import { CATEGORIES as INITIAL_CATEGORIES } from '../data';
 import type { Category } from '../types';
 
-export default function AdminGate() {
+interface AdminGateProps {
+  mainAppUrl?: string;
+}
+
+export default function AdminGate({ mainAppUrl = 'https://app.yazu.digital' }: AdminGateProps) {
   const { user, loading: authLoading, signIn, signOut, isConfigured } = useAuth();
   const [adminCheck, setAdminCheck] = useState<boolean | null>(null);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
@@ -58,7 +62,7 @@ export default function AdminGate() {
           >
             Çıkış yap
           </button>
-          <a href="/" className="block mt-4 text-sm text-brand-600 hover:text-brand-700 font-medium">
+          <a href={mainAppUrl} className="block mt-4 text-sm text-brand-600 hover:text-brand-700 font-medium">
             Ana uygulamaya dön
           </a>
         </div>
@@ -70,7 +74,7 @@ export default function AdminGate() {
     <AdminView
       categories={categories}
       setCategories={setCategories}
-      onExit={() => { window.location.href = '/'; }}
+      onExit={() => { window.location.href = mainAppUrl; }}
     />
   );
 }

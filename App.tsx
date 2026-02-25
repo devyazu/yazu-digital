@@ -310,12 +310,24 @@ function usePathname() {
   return pathname;
 }
 
-const App: React.FC = () => {
+const MAIN_APP_URL = import.meta.env.VITE_APP_URL || 'https://app.yazu.digital';
+const ADMIN_DOMAIN = import.meta.env.VITE_ADMIN_DOMAIN || 'admin.yazu.digital';
+
+function useIsAdminApp() {
   const pathname = usePathname();
-  if (pathname === '/admin') {
+  const isAdminByPath = pathname === '/admin';
+  const isAdminByHost = typeof window !== 'undefined' && window.location.hostname === ADMIN_DOMAIN;
+  return isAdminByHost || isAdminByPath;
+}
+
+const App: React.FC = () => {
+  const isAdminApp = useIsAdminApp();
+  const isAdminDomain = typeof window !== 'undefined' && window.location.hostname === ADMIN_DOMAIN;
+  const mainAppUrl = isAdminDomain ? MAIN_APP_URL : '/';
+  if (isAdminApp) {
     return (
       <AuthProvider>
-        <AdminGate />
+        <AdminGate mainAppUrl={mainAppUrl} />
       </AuthProvider>
     );
   }
