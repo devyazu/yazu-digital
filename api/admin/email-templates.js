@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   if (method === 'GET') {
     const { data, error } = await supabaseAdmin
       .from('email_templates')
-      .select('id, slug, name, description, subject, body_html, from_name, recipient_type, is_active, updated_at')
+      .select('id, slug, name, description, subject, body_html, body_json, from_name, recipient_type, is_active, updated_at')
       .order('slug');
     if (error) {
       console.error('email_templates list error:', error);
@@ -44,13 +44,14 @@ export default async function handler(req, res) {
     } catch {
       return send(res, 400, { error: 'Invalid JSON body' });
     }
-    const { slug, subject, body_html, from_name, is_active } = body;
+    const { slug, subject, body_html, body_json, from_name, is_active } = body;
     if (!slug || typeof slug !== 'string') {
       return send(res, 400, { error: 'slug is required' });
     }
     const updates = {};
     if (subject !== undefined) updates.subject = subject;
     if (body_html !== undefined) updates.body_html = stripDataUrlsFromHtml(body_html);
+    if (body_json !== undefined) updates.body_json = typeof body_json === 'string' ? body_json : (body_json != null ? JSON.stringify(body_json) : null);
     if (from_name !== undefined) updates.from_name = from_name;
     if (typeof is_active === 'boolean') updates.is_active = is_active;
     updates.updated_at = new Date().toISOString();

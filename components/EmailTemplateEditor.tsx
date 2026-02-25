@@ -1,82 +1,119 @@
 /**
- * Drag-and-drop e-posta şablon editörü (GrapesJS + newsletter preset).
- * Ref ile getHtml() ve getInlinedHtml() sunar; Kaydet'te inlined HTML kullanılabilir.
+ * E-posta şablon editörü (Easy Email).
+ * Ref ile getHtml() ve getJson() sunar; Kaydet'te HTML + JSON API'ye gönderilir.
  */
-import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import grapesjs from 'grapesjs';
-import GjsEditor from '@grapesjs/react';
-import gjsBlocksBasic from 'grapesjs-blocks-basic';
-import gjsPresetNewsletter from 'grapesjs-preset-newsletter';
-import 'grapesjs/dist/css/grapes.min.css';
+import React, { useRef, forwardRef, useImperativeHandle } from 'react';
+import { BlockManager, BasicType, JsonToMjml } from 'easy-email-core';
+import { EmailEditor, EmailEditorProvider } from 'easy-email-editor';
+import mjml from 'mjml-browser';
+import 'easy-email-editor/lib/style.css';
 
 export interface EmailTemplateEditorRef {
   getHtml: () => string;
-  /** E-posta istemcileri için CSS inlined HTML (newsletter preset komutu) */
+  getJson: () => string;
   getInlinedHtml: () => string;
 }
 
 interface EmailTemplateEditorProps {
-  initialHtml: string;
-  /** Şablon değişince editörü yeniden mount etmek için (key olarak kullanılır) */
+  /** Başlangıç içeriği: HTML (legacy, yok sayılır) veya boş → varsayılan blok. */
+  initialHtml?: string;
+  /** Easy Email JSON (body_json). Varsa editör buna göre yüklenir. */
+  initialJson?: string | null;
+  /** Şablon değişince yeniden mount için key */
   templateKey?: string;
   className?: string;
-  /** Tam ekran modunda tüm yüksekliği kullan */
   fullHeight?: boolean;
 }
 
+const defaultContent =
+  (BlockManager.getBlockByType(BasicType.PAGE)?.create({}) as Record<string, unknown>) ?? {
+    type: BasicType.PAGE,
+    data: { value: {} },
+    attributes: {},
+    children: [],
+  };
+
+function getDefaultData() {
+  return {
+    subject: '',
+    subTitle: '',
+    content: defaultContent,
+  };
+}
+
+function parseInitialData(initialJson: string | null | undefined) {
+  if (!initialJson || typeof initialJson !== 'string') return getDefaultData();
+  try {
+    const parsed = JSON.parse(initialJson) as { subject?: string; subTitle?: string; content?: unknown };
+    if (parsed && typeof parsed === 'object' && parsed.content) {
+      return {
+        subject: parsed.subject ?? '',
+        subTitle: parsed.subTitle ?? '',
+        content: parsed.content,
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return getDefaultData();
+}
+
 const EmailTemplateEditor = forwardRef<EmailTemplateEditorRef, EmailTemplateEditorProps>(
-  function EmailTemplateEditor({ initialHtml, templateKey, className, fullHeight }, ref) {
-    const editorInstance = useRef<ReturnType<typeof grapesjs.init> | null>(null);
+  function EmailTemplateEditor({ initialJson, templateKey, className, fullHeight }, ref) {
+    const valuesRef = useRef<{ content: unknown; subject: string; subTitle: string }>(getDefaultData());
 
     useImperativeHandle(
       ref,
       () => ({
-        getHtml: () => editorInstance.current?.getHtml() ?? '',
-        getInlinedHtml: () => {
-          const ed = editorInstance.current;
-          if (!ed) return '';
-          const cmd = ed.Commands.get('gjs-get-inlined-html');
-          if (cmd) {
-            const res = cmd.run(ed);
-            if (typeof res === 'string') return res;
+        getHtml: () => {
+          try {
+            const mjmlStr = JsonToMjml({
+              data: valuesRef.current.content as Parameters<typeof JsonToMjml>[0]['data'],
+              mode: 'production',
+            });
+            const result = mjml(mjmlStr as string);
+            return (result as { html?: string })?.html ?? '';
+          } catch (e) {
+            console.warn('EmailTemplateEditor getHtml:', e);
+            return '';
           }
-          return ed.getHtml() ?? '';
+        },
+        getJson: () => JSON.stringify(valuesRef.current),
+        getInlinedHtml: () => {
+          try {
+            const mjmlStr = JsonToMjml({
+              data: valuesRef.current.content as Parameters<typeof JsonToMjml>[0]['data'],
+              mode: 'production',
+            });
+            const result = mjml(mjmlStr as string);
+            return (result as { html?: string })?.html ?? '';
+          } catch (e) {
+            console.warn('EmailTemplateEditor getInlinedHtml:', e);
+            return '';
+          }
         },
       }),
       []
     );
 
+    const initialData = parseInitialData(initialJson);
+
     return (
       <div className={className} style={fullHeight ? { minHeight: 0, height: '100%' } : { minHeight: 420 }}>
-        <GjsEditor
+        <EmailEditorProvider
           key={templateKey ?? 'default'}
-          grapesjs={grapesjs}
-          grapesjsCss=""
-          options={{
-            height: fullHeight ? '100%' : '400px',
-            storageManager: false,
-            autorender: true,
-            fromElement: false,
-            deviceManager: {
-              devices: [
-                { name: 'Desktop', width: '' },
-                { name: 'Tablet', width: '768px', widthMedia: '992px' },
-                { name: 'Mobile', width: '320px', widthMedia: '480px' },
-              ],
-            },
+          data={initialData as Parameters<typeof EmailEditorProvider>[0]['data']}
+          height={fullHeight ? '100%' : '400px'}
+        >
+          {({ values }) => {
+            valuesRef.current = {
+              content: values.content,
+              subject: values.subject ?? '',
+              subTitle: values.subTitle ?? '',
+            };
+            return <EmailEditor />;
           }}
-          plugins={[gjsBlocksBasic, gjsPresetNewsletter]}
-          onEditor={(editor) => {
-            editorInstance.current = editor;
-            if (initialHtml?.trim()) {
-              try {
-                editor.setComponents(initialHtml.trim());
-              } catch (e) {
-                console.warn('EmailTemplateEditor setComponents:', e);
-              }
-            }
-          }}
-        />
+        </EmailEditorProvider>
       </div>
     );
   }

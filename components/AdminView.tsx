@@ -32,12 +32,13 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail'>('tools');
   const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS_LIST);
   // E-posta şablonları
-  const [emailTemplates, setEmailTemplates] = useState<Array<{ id: string; slug: string; name: string; description: string | null; subject: string; body_html: string; from_name: string | null; recipient_type: string; is_active: boolean; updated_at: string }>>([]);
+  const [emailTemplates, setEmailTemplates] = useState<Array<{ id: string; slug: string; name: string; description: string | null; subject: string; body_html: string; body_json: string | null; from_name: string | null; recipient_type: string; is_active: boolean; updated_at: string }>>([]);
   const [emailTemplatesLoading, setEmailTemplatesLoading] = useState(false);
   const [emailTemplatesError, setEmailTemplatesError] = useState<string | null>(null);
   const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null);
   const [editSubject, setEditSubject] = useState('');
   const [editBodyHtml, setEditBodyHtml] = useState('');
+  const [editBodyJson, setEditBodyJson] = useState<string | null>(null);
   const [templateSaveStatus, setTemplateSaveStatus] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle');
   const [testEmailTo, setTestEmailTo] = useState('');
   const [testEmailSending, setTestEmailSending] = useState(false);
@@ -107,6 +108,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     if (t) {
       setEditSubject(t.subject);
       setEditBodyHtml(t.body_html);
+      setEditBodyJson(t.body_json ?? null);
     }
   }, [selectedTemplateSlug, emailTemplates]);
 
@@ -654,21 +656,24 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
 
   const getEditorHtml = () =>
     emailEditorRef.current?.getInlinedHtml?.() || emailEditorRef.current?.getHtml() || editBodyHtml;
+  const getEditorJson = () => emailEditorRef.current?.getJson?.() ?? editBodyJson;
 
   const handleSaveTemplate = async () => {
     if (!selectedTemplateSlug || !session?.access_token) return;
     const html = getEditorHtml();
+    const json = getEditorJson();
     setTemplateSaveStatus('saving');
     try {
       const r = await fetch('/api/admin/email-templates', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ slug: selectedTemplateSlug, subject: editSubject, body_html: html }),
+        body: JSON.stringify({ slug: selectedTemplateSlug, subject: editSubject, body_html: html, body_json: json }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || data?.detail || `Hata ${r.status}`);
-      setEmailTemplates((prev) => prev.map((t) => (t.slug === selectedTemplateSlug ? { ...t, subject: editSubject, body_html: html, updated_at: new Date().toISOString() } : t)));
+      setEmailTemplates((prev) => prev.map((t) => (t.slug === selectedTemplateSlug ? { ...t, subject: editSubject, body_html: html, body_json: json, updated_at: new Date().toISOString() } : t)));
       setEditBodyHtml(html);
+      setEditBodyJson(json);
       setTemplateSaveStatus('ok');
       setTimeout(() => setTemplateSaveStatus('idle'), 2000);
     } catch (e) {
@@ -679,7 +684,9 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
 
   const handleCloseFullscreenEditor = () => {
     const html = getEditorHtml();
+    const json = getEditorJson();
     setEditBodyHtml(html);
+    setEditBodyJson(json);
     setEmailEditorFullscreen(false);
   };
 
@@ -829,7 +836,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
           <div className="flex-1 min-h-0 flex flex-col">
             <EmailTemplateEditor
               ref={emailEditorRef}
-              initialHtml={editBodyHtml}
+              initialJson={editBodyJson}
               templateKey={selectedTemplateSlug}
               className="flex-1 min-h-0 w-full"
               fullHeight

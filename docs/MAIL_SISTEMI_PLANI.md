@@ -30,7 +30,9 @@ Bu dokümanda tüm mail akışları, admin yönetim paneli, otomasyon ve editör
 
 Tüm bu mailler **veritabanındaki şablonlardan** (subject + HTML body) alınacak; admin panelden düzenlenebilecek.
 
-**Görseller:** E-postada görsel kullanmak için GrapesJS’te Image bloğuna **URL** (https://…) girin. Yükleme (upload) base64 üretir; sistem güvenlik nedeniyle data URL’leri e-postadan çıkarır, bu yüzden yüklenen görsel mailde görünmez. Görselin public bir adresi olmalı.
+**Editör:** E-posta şablonları **Easy Email** (drag-and-drop, MJML tabanlı) ile düzenlenir. İçerik `body_json` olarak saklanır; gönderimde HTML’e çevrilir (`body_html`).
+
+**Görseller:** E-postada görsel kullanmak için Image bloğuna **URL** (https://…) girin. Yükleme (upload) base64 üretir; sistem güvenlik nedeniyle data URL’leri e-postadan çıkarır, bu yüzden yüklenen görsel mailde görünmez. Görselin public bir adresi olmalı.
 
 ---
 
