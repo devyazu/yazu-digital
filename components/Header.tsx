@@ -7,7 +7,8 @@ interface HeaderProps {
   onToggleDesktopSidebar: () => void;
   user: UserProfile;
   brands: Brand[];
-  currentBrand: Brand;
+  currentBrand: Brand | null;
+  brandsLoading?: boolean;
   onBrandSelect: (brand: Brand) => void;
   onNavigate: (view: 'brands-list' | 'brand-connect' | 'settings') => void;
   isDesktopSidebarOpen: boolean;
@@ -23,6 +24,7 @@ const Header: React.FC<HeaderProps> = ({
   user, 
   brands, 
   currentBrand, 
+  brandsLoading = false,
   onBrandSelect, 
   onNavigate,
   isDesktopSidebarOpen,
@@ -68,7 +70,6 @@ const Header: React.FC<HeaderProps> = ({
         
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()} title="Yazu">
           <img src="/yazu.svg" alt="Yazu" className="h-8 w-auto" />
-          <span className="text-lg font-bold text-stone-800 hidden sm:block tracking-tight">Yazu</span>
         </div>
       </div>
 
@@ -109,12 +110,23 @@ const Header: React.FC<HeaderProps> = ({
             onClick={() => setIsBrandMenuOpen(!isBrandMenuOpen)}
             className="hidden sm:flex items-center gap-2 px-3 py-2 bg-white/50 hover:bg-white border border-stone-200/50 hover:border-brand-300 rounded-lg transition-all text-sm font-medium text-stone-700 shadow-sm backdrop-blur-sm"
           >
-            {currentBrand.logoUrl ? (
-                <img src={currentBrand.logoUrl} alt="Logo" className="w-5 h-5 rounded-full object-cover" />
+            {brandsLoading ? (
+              <span className="text-stone-400 text-xs">Yükleniyor...</span>
+            ) : currentBrand ? (
+              <>
+                {currentBrand.logoUrl ? (
+                  <img src={currentBrand.logoUrl} alt="Logo" className="w-5 h-5 rounded-full object-cover" />
+                ) : (
+                  <Briefcase className="w-4 h-4 text-brand-600" />
+                )}
+                <span className="max-w-[100px] truncate">{currentBrand.name}</span>
+              </>
             ) : (
+              <>
                 <Briefcase className="w-4 h-4 text-brand-600" />
+                <span className="max-w-[100px] truncate">Marka seçin</span>
+              </>
             )}
-            <span className="max-w-[100px] truncate">{currentBrand.name}</span>
             <ChevronDown className="w-3 h-3 text-stone-400" />
           </button>
 
@@ -131,7 +143,7 @@ const Header: React.FC<HeaderProps> = ({
                       onBrandSelect(brand);
                       setIsBrandMenuOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-3 text-sm hover:bg-stone-50/50 flex items-center justify-between group ${currentBrand.id === brand.id ? 'bg-brand-50/50 text-brand-700 font-medium' : 'text-stone-600'}`}
+                    className={`w-full text-left px-4 py-3 text-sm hover:bg-stone-50/50 flex items-center justify-between group ${currentBrand?.id === brand.id ? 'bg-brand-50/50 text-brand-700 font-medium' : 'text-stone-600'}`}
                   >
                     <div className="flex items-center gap-3">
                         <img 
@@ -141,7 +153,7 @@ const Header: React.FC<HeaderProps> = ({
                         />
                         <span>{brand.name}</span>
                     </div>
-                    {currentBrand.id === brand.id && <div className="w-1.5 h-1.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(230,96,0,0.6)]"></div>}
+                    {currentBrand?.id === brand.id && <div className="w-1.5 h-1.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(230,96,0,0.6)]"></div>}
                   </button>
                 ))}
               </div>

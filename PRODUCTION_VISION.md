@@ -7,8 +7,8 @@ Bu belge, mevcut taslağın **100’lerce aktif kullanıcı** ve **kullanıcı b
 ## Mevcut durum (taslak)
 
 - **Kullanıcı / marka verisi:** Kod içinde sabit (`data.ts`). Gerçek hesap yok.
-- **AI çıktıları:** Sadece tarayıcıda `localStorage` (“Save” ile kaydedilenler). Cihaz değişince kaybolur; kullanıcılar arası ayrım yok.
-- **Tarihçe ekranı:** Boş/placeholder; gerçek veri yok.
+- **AI çıktıları:** Veritabanında `chat_archive` tablosunda; "Save" ve her araç çalıştırmasında kaydedilir. Tarihçe ekranı buradan okur.
+- **Tarihçe ekranı:** Chat Archive (DB) üzerinden kullanıcıya özel kayıtlar listelenir.
 
 Bu yapı **demo / taslak** için uygundur; canlıya alındığında herkes aynı “mock” kullanıcıyla aynı deneyimi görür.
 
@@ -35,7 +35,7 @@ Bu yapı **demo / taslak** için uygundur; canlıya alındığında herkes aynı
 |------|--------|--------|
 | **Kimlik** | Yok (mock kullanıcı) | Gerçek auth: e-posta/şifre veya OAuth (Google, GitHub vb.) |
 | **Kullanıcı / marka / kredi verisi** | `data.ts` (sabit) | Veritabanında; kullanıcıya göre okuma/yazma |
-| **AI konuşmaları (chat archive)** | `localStorage`, cihaza özel | Veritabanında; kullanıcı ID’ye bağlı, kalıcı |
+| **AI konuşmaları (chat archive)** | Veritabanında (`chat_archive`) | Veritabanında; kullanıcı ID’ye bağlı, kalıcı |
 | **Tarihçe ekranı** | Placeholder | Kullanıcının kendi kayıtlarını listeleme + filtreleme/arama |
 
 ---

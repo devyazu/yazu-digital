@@ -10,7 +10,7 @@ Bu belge, **yazu.digital** adresinde sitesi canlıya almak için yapmanız gerek
 Evet. Siteyi canlıya almak için **Vercel hesabı** açmanız gerekir. Projeyi Vercel’e bağlayıp oradan yayına alacaksınız. Bilgisayarınızda localhost’ta çalıştırmanız **gerekmez**; tüm adımlar tarayıcı + Vercel + domain üzerinden yürür.
 
 **Veritabanı konusu nasıl oluyor?**  
-Bu projede **veritabanı yok** ve canlıya çıkmak için **veritabanı gerekmez**. Kullanıcılar, markalar ve araç listesi sabit veri; kaydedilen AI çıktıları ise ziyaretçinin kendi tarayıcısında (localStorage) tutulur. Yani sadece **Vercel + domain + Gemini API anahtarı** ile yayına alabilirsiniz. İleride gerçek kullanıcı hesapları veya abonelik isterseniz, o aşamada bir veritabanı (ör. Supabase, Vercel Postgres) eklenebilir.
+Projede **Supabase** kullanılıyor: kullanıcı auth, chat archive (AI çıktıları) ve profil verisi veritabanında. Canlıya almak için **Vercel + Supabase + domain + Gemini API anahtarı** gerekir. Kullanıcılar, markalar ve araç listesi şu an kısmen mock (`data.ts`); ileride markalar/entegrasyonlar da veritabanına taşınacak. Detay: [docs/DATA_STORAGE.md](docs/DATA_STORAGE.md).
 
 ---
 

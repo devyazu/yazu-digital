@@ -8,7 +8,7 @@ interface BrandsViewProps {
   onSelectBrand: (brand: Brand) => void;
   onManageBrand: (brand: Brand) => void;
   onAddNew: () => void;
-  onUpdateBrandLogo?: (brand: Brand, newLogoUrl: string) => void;
+  onUpdateBrandLogo?: (brand: Brand, file: File) => void;
 }
 
 const BrandsView: React.FC<BrandsViewProps> = ({ brands, user, onSelectBrand, onManageBrand, onAddNew, onUpdateBrandLogo }) => {
@@ -27,13 +27,8 @@ const BrandsView: React.FC<BrandsViewProps> = ({ brands, user, onSelectBrand, on
     const file = e.target.files?.[0];
     if (!file || !editingLogoBrand || !onUpdateBrandLogo) return;
     if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      onUpdateBrandLogo(editingLogoBrand, dataUrl);
-      setEditingLogoBrand(null);
-    };
-    reader.readAsDataURL(file);
+    onUpdateBrandLogo(editingLogoBrand, file);
+    setEditingLogoBrand(null);
     e.target.value = '';
   };
   const usedBrands = brands.length;

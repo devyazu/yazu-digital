@@ -16,7 +16,7 @@ Bu rapor, **yazu-digital** (SalesMind AI / MarketerAI Canvas) uygulamasının ne
 - **Admin paneli**, araç/kategori düzenleme ve kullanıcı yönetimi için mock verilerle çalışır.
 - **Destek (Support)** ekranı: FAQ ve forum benzeri içerikler (statik/mock).
 
-Özetle: **Pazarlama/satış odaklı, çok araçlı bir “AI Marketing Suite” taslak uygulamasıdır.** Kullanıcı ve marka verisi kod içinde (mock); AI çıktıları yalnızca tarayıcıda `localStorage` ile tutulur. Hedef üretim senaryosu (gerçek kullanıcılar, kullanıcı bazlı chat arşivi, 100’lerce aktif kullanıcı) **[PRODUCTION_VISION.md](./PRODUCTION_VISION.md)** belgesinde tanımlanmıştır.
+Özetle: **Pazarlama/satış odaklı, çok araçlı bir “AI Marketing Suite” taslak uygulamasıdır.** Kullanıcı ve marka verisi kod içinde (mock); AI çıktıları veritabanında (Supabase `chat_archive`) tutulur. Hedef üretim senaryosu (gerçek kullanıcılar, kullanıcı bazlı chat arşivi, 100’lerce aktif kullanıcı) **[PRODUCTION_VISION.md](./PRODUCTION_VISION.md)** belgesinde tanımlanmıştır.
 
 ---
 
@@ -79,7 +79,7 @@ Bu rapor, **yazu-digital** (SalesMind AI / MarketerAI Canvas) uygulamasının ne
 ### 2.5 State Yönetimi
 - **Global state**: React `useState` (App.tsx); Redux/Zustand yok.
 - **Veri kaynağı**: `data.ts` (MOCK_USER, MOCK_BRANDS, CATEGORIES, FAQS, FORUM_TOPICS).
-- **Kalıcılık**: Sadece `localStorage` — `ai_history` (kaydedilen çıktılar). Kullanıcı/marka/abonelik veritabanında değil.
+- **Kalıcılık**: AI çıktıları Supabase `chat_archive` tablosunda. Kullanıcı/marka/abonelik hâlâ mock (ileride DB).
 
 ### 2.6 “Routing”
 - SPA; gerçek URL routing yok. `view` state ile ekranlar değişir: `home | tool | category | history | brands-list | brand-connect | settings | admin | sales-agent | support`.
@@ -143,8 +143,8 @@ npm run build
 - **Backend yok**: Kullanıcı, abonelik, ödeme, entegrasyonlar hep mock; production için tam backend gerekir.
 - **Gerçek entegrasyon yok**: “Connected” entegrasyonlar sadece UI; Shopify/Meta/Google vb. veri çekilmiyor.
 - **Sales Agent sadece config**: Widget/chat ve gerçek sohbet backend’i yok.
-- **Routing**: URL ile sayfa paylaşımı/SEO yok; sayfa yenilenince state sıfırlanır (localStorage hariç).
-- **Tarihçe**: Sadece localStorage’da; senkronizasyon, limit veya yedekleme yok.
+- **Routing**: URL ile sayfa paylaşımı/SEO yok; sayfa yenilenince state sıfırlanır (chat archive DB'de kalır).
+- **Tarihçe**: Veritabanında (chat_archive); kullanıcıya özel listeleme mevcut.
 - **Arama**: Header ve Dashboard’daki arama alanları işlevsel değil (aranan metne göre filtreleme yok).
 - **Dosya yükleme**: ToolWorkspace’te dosya adları prompt’a ekleniyor ama içerik Gemini’ye gönderilmiyor; gerçek dosya analizi yok.
 - **Tek model**: Model adı (`gemini-3-flash-preview`) sabit; hata durumları ve fallback sınırlı.
@@ -160,7 +160,7 @@ npm run build
 | **Uygulama türü** | AI destekli pazarlama/satış asistanı (multi-tool, multi-brand) |
 | **Frontend** | React 19 + TypeScript + Vite 6 + Tailwind 4 |
 | **AI** | Google Gemini (@google/genai), metin üretimi |
-| **Veri** | Mock (data.ts) + localStorage (history) |
+| **Veri** | Mock (data.ts) + Supabase (chat_archive, profiles, auth) |
 | **Auth** | Yok |
 | **Backend** | Yok (sadece doğrudan Gemini çağrısı) |
 | **Live için kritik** | API key’i backend proxy ile saklamak, auth + DB + ödeme planlamak |

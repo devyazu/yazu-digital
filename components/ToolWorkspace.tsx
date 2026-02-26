@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Tool, HistoryItem, Brand } from '../types';
+import { Tool, Brand } from '../types';
 import { Copy, RefreshCw, Zap, Sparkles, Save, ArrowLeft, Database, Paperclip, Image as ImageIcon, X, FileText, Info } from 'lucide-react';
 import { generateContent } from '../services/geminiService';
 import { saveToChatArchive } from '../services/chatArchive';
@@ -91,22 +91,20 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ tool, brand, onBack }) =>
     }
   };
 
-  const handleSave = () => {
-    if (!output) return;
-    
-    const newItem: HistoryItem = {
-      id: Date.now().toString(),
+  const handleSave = async () => {
+    if (!output || !authUser) return;
+    const { error } = await saveToChatArchive({
+      userId: authUser.id,
+      toolId: tool.id,
       toolName: tool.name,
       input,
       output,
-      timestamp: Date.now()
-    };
-    
-    const existing = JSON.parse(localStorage.getItem('ai_history') || '[]');
-    localStorage.setItem('ai_history', JSON.stringify([newItem, ...existing]));
-    
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+      brandId: brand.id,
+    });
+    if (!error) {
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    }
   };
 
   const handleCopy = () => {

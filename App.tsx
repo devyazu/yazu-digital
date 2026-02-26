@@ -17,8 +17,9 @@ import SupportView from './components/SupportView';
 import SalesAgentView from './components/SalesAgentView';
 import LoginPage from './components/LoginPage';
 import ChatArchiveView from './components/ChatArchiveView';
-import { CATEGORIES as INITIAL_CATEGORIES, MOCK_USER, MOCK_BRANDS } from './data';
+import { CATEGORIES as INITIAL_CATEGORIES, MOCK_USER } from './data';
 import { Tool, Brand, Category, SalesAgentConfig } from './types';
+import { getBrands, createBrand, uploadBrandLogo } from './services/brandService';
 
 function filterCategoriesBySearch(categories: Category[], query: string): Category[] {
   const q = query.trim().toLowerCase();
@@ -68,10 +69,22 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   
-  // Brand State
-  const [currentBrand, setCurrentBrand] = useState<Brand>(MOCK_BRANDS[0]);
-  const [brands, setBrands] = useState<Brand[]>(MOCK_BRANDS);
+  // Brand State (veritabanından yüklenir)
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
+  const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [managingBrand, setManagingBrand] = useState<Brand | null>(null);
+
+  useEffect(() => {
+    if (!authUser) return;
+    setBrandsLoading(true);
+    getBrands(authUser.id).then(({ data, error }) => {
+      setBrandsLoading(false);
+      if (error) return;
+      setBrands(data);
+      setCurrentBrand(data[0] ?? null);
+    });
+  }, [authUser?.id]);
 
   // User State
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -146,34 +159,34 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     setView('brand-connect');
   };
 
-  const handleUpdateBrandLogo = (brand: Brand, newLogoUrl: string) => {
+  const handleUpdateBrandLogo = async (brand: Brand, file: File) => {
+    if (!authUser) return;
+    const { url, error } = await uploadBrandLogo(brand.id, authUser.id, file);
+    if (error || !url) return;
     setBrands((prev) =>
-      prev.map((b) => (b.id === brand.id ? { ...b, logoUrl: newLogoUrl } : b))
+      prev.map((b) => (b.id === brand.id ? { ...b, logoUrl: url } : b))
     );
-    if (currentBrand.id === brand.id) {
-      setCurrentBrand((prev) => ({ ...prev, logoUrl: newLogoUrl }));
+    if (currentBrand?.id === brand.id) {
+      setCurrentBrand((prev) => (prev ? { ...prev, logoUrl: url } : null));
     }
   };
 
-  const handleAddNewBrand = () => {
-    const newBrand: Brand = {
-      id: `brand-${Date.now()}`,
-      name: 'New Brand',
-      website: '',
-      logoUrl: '/yazu.svg',
-      integrations: []
-    };
-    setBrands([...brands, newBrand]);
+  const handleAddNewBrand = async () => {
+    if (!authUser) return;
+    const { data: newBrand, error } = await createBrand(authUser.id, { name: 'New Brand', website: '' });
+    if (error || !newBrand) return;
+    setBrands((prev) => [...prev, newBrand]);
+    setCurrentBrand(newBrand);
     setManagingBrand(newBrand);
     setView('brand-connect');
   };
 
   // Update Sales Agent Config
   const handleUpdateSalesAgent = (config: SalesAgentConfig) => {
+    if (!currentBrand) return;
     const updatedBrand = { ...currentBrand, salesAgentConfig: config };
-    // Update local state for brands list and current brand
     setCurrentBrand(updatedBrand);
-    setBrands(brands.map(b => b.id === updatedBrand.id ? updatedBrand : b));
+    setBrands((prev) => prev.map((b) => (b.id === updatedBrand.id ? updatedBrand : b)));
   };
 
   const filteredCategories = useMemo(
@@ -197,6 +210,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         user={MOCK_USER}
         brands={brands}
         currentBrand={currentBrand}
+        brandsLoading={brandsLoading}
         onBrandSelect={handleBrandSelect}
         onNavigate={handleNavigate}
         isDesktopSidebarOpen={isDesktopSidebarOpen}
@@ -266,11 +280,19 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           />
         )}
 
-        {view === 'sales-agent' && (
+        {view === 'sales-agent' && currentBrand && (
           <SalesAgentView 
             brand={currentBrand}
             onUpdateConfig={handleUpdateSalesAgent}
           />
+        )}
+        {view === 'sales-agent' && !currentBrand && (
+          <div className="flex-1 flex items-center justify-center p-10">
+            <div className="text-center text-stone-500">
+              <p className="font-medium mb-2">Önce bir marka seçin</p>
+              <button onClick={() => handleNavigate('brands-list')} className="text-brand-600 hover:underline">My Brands</button>
+            </div>
+          </div>
         )}
 
         {view === 'support' && (
@@ -281,7 +303,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           <SettingsView authUser={authUser} user={MOCK_USER} />
         )}
 
-        {view === 'tool' && selectedTool && (
+        {view === 'tool' && selectedTool && currentBrand && (
           <>
             <ToolWorkspace 
               tool={selectedTool} 
@@ -290,6 +312,14 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
             />
             <ExamplesPanel tool={selectedTool} />
           </>
+        )}
+        {view === 'tool' && selectedTool && !currentBrand && (
+          <div className="flex-1 flex items-center justify-center p-10">
+            <div className="text-center text-stone-500">
+              <p className="font-medium mb-2">Araç kullanmak için önce bir marka seçin</p>
+              <button onClick={() => handleNavigate('brands-list')} className="text-brand-600 hover:underline">My Brands</button>
+            </div>
+          </div>
         )}
         
         {view === 'history' && (
