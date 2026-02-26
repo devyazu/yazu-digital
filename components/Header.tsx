@@ -66,11 +66,9 @@ const Header: React.FC<HeaderProps> = ({
           <PanelLeft className="w-5 h-5" />
         </button>
         
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()}>
-          <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-brand-200">
-            M
-          </div>
-          <span className="text-lg font-bold text-stone-800 hidden sm:block tracking-tight">Marketer<span className="text-brand-600">AI</span></span>
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()} title="Yazu">
+          <img src="/yazu.svg" alt="Yazu" className="h-8 w-auto" />
+          <span className="text-lg font-bold text-stone-800 hidden sm:block tracking-tight">Yazu</span>
         </div>
       </div>
 

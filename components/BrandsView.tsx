@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Brand, UserProfile } from '../types';
-import { Plus, Settings, ShoppingBag, ShieldCheck, Pen, UploadCloud } from 'lucide-react';
+import { Plus, Settings, ShoppingBag, ShieldCheck, Pen } from 'lucide-react';
 
 interface BrandsViewProps {
   brands: Brand[];
@@ -8,10 +8,34 @@ interface BrandsViewProps {
   onSelectBrand: (brand: Brand) => void;
   onManageBrand: (brand: Brand) => void;
   onAddNew: () => void;
+  onUpdateBrandLogo?: (brand: Brand, newLogoUrl: string) => void;
 }
 
-const BrandsView: React.FC<BrandsViewProps> = ({ brands, user, onSelectBrand, onManageBrand, onAddNew }) => {
+const BrandsView: React.FC<BrandsViewProps> = ({ brands, user, onSelectBrand, onManageBrand, onAddNew, onUpdateBrandLogo }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editingLogoBrand, setEditingLogoBrand] = useState<Brand | null>(null);
   const brandLimit = user.maxBrands;
+
+  const handleLogoClick = (e: React.MouseEvent, brand: Brand) => {
+    e.stopPropagation();
+    if (!onUpdateBrandLogo) return;
+    setEditingLogoBrand(brand);
+    fileInputRef.current?.click();
+  };
+
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingLogoBrand || !onUpdateBrandLogo) return;
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      onUpdateBrandLogo(editingLogoBrand, dataUrl);
+      setEditingLogoBrand(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
   const usedBrands = brands.length;
   const percentage = (usedBrands / brandLimit) * 100;
 
@@ -59,16 +83,32 @@ const BrandsView: React.FC<BrandsViewProps> = ({ brands, user, onSelectBrand, on
               >
                 <div className="p-6 flex-1">
                   <div className="flex items-start justify-between mb-4">
-                    {/* Logo with Hover Edit Effect */}
-                    <div className="relative w-16 h-16 rounded-xl overflow-hidden shadow-md group/logo">
+                    {/* Logo with Hover Edit Effect - click to upload new logo */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoFileChange}
+                    />
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => handleLogoClick(e, brand)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleLogoClick(e as unknown as React.MouseEvent, brand)}
+                      className="relative w-16 h-16 rounded-xl overflow-hidden shadow-md group/logo cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                      title={onUpdateBrandLogo ? 'Logo değiştir' : undefined}
+                    >
                         <img 
                             src={brand.logoUrl || "/yazu.svg"} 
                             alt={brand.name} 
                             className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/logo:opacity-100 transition-opacity flex items-center justify-center">
+                        {onUpdateBrandLogo && (
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/logo:opacity-100 transition-opacity flex items-center justify-center">
                             <Pen className="w-5 h-5 text-white" />
-                        </div>
+                          </div>
+                        )}
                     </div>
 
                     {connectedCount > 0 ? (

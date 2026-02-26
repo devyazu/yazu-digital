@@ -146,6 +146,15 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     setView('brand-connect');
   };
 
+  const handleUpdateBrandLogo = (brand: Brand, newLogoUrl: string) => {
+    setBrands((prev) =>
+      prev.map((b) => (b.id === brand.id ? { ...b, logoUrl: newLogoUrl } : b))
+    );
+    if (currentBrand.id === brand.id) {
+      setCurrentBrand((prev) => ({ ...prev, logoUrl: newLogoUrl }));
+    }
+  };
+
   const handleAddNewBrand = () => {
     const newBrand: Brand = {
       id: `brand-${Date.now()}`,
@@ -246,6 +255,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
             onSelectBrand={handleBrandSelect}
             onManageBrand={handleManageBrand}
             onAddNew={handleAddNewBrand}
+            onUpdateBrandLogo={handleUpdateBrandLogo}
           />
         )}
 
