@@ -1,5 +1,18 @@
 # Supabase Storage – avatars bucket policy’leri (baştan kurulum)
 
+## En hızlı yol (önerilen)
+
+**Migration ile tek seferde bucket + policy’ler:**
+
+1. **supabase.com** → projen (örn. yazu-digital) → **SQL Editor**.
+2. **supabase/migrations/010_avatars_bucket.sql** dosyasını aç, **tüm içeriği** kopyala.
+3. SQL Editor’e yapıştır → **Run**.
+4. Bitti. Avatar yükleme çalışır (profil avatarı güncellemesi de cache-busting ile düzelmiş olmalı).
+
+---
+
+## Elle kurulum (bucket’ı zaten oluşturduysan, sadece policy ekleyeceksen)
+
 Bucket’taki **tüm policy’leri sildikten sonra** aşağıdakileri sırayla ekle.  
 Bucket adı: **avatars** (küçük harf). Farklıysa her yerde `avatars` yerine kendi bucket adını yaz.
 

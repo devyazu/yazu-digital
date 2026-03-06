@@ -53,7 +53,8 @@ export async function uploadAvatar(userId: string, file: File): Promise<{ url: s
   const { error: uploadError } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, { upsert: true });
   if (uploadError) return { url: null, error: uploadError };
   const { data: urlData } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
-  const url = urlData?.publicUrl ?? null;
+  const baseUrl = urlData?.publicUrl ?? null;
+  const url = baseUrl ? `${baseUrl}?v=${Date.now()}` : null;
   if (url) {
     const { error: updateError } = await updateProfile(userId, { avatar_url: url });
     if (updateError) return { url, error: updateError };
