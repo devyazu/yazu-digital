@@ -161,25 +161,28 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-    {/* Mini icon bar when desktop sidebar is closed */}
+    {/* Mini icon bar when desktop sidebar is closed — scrollable, no scrollbar */}
     <aside className={miniSidebarClasses}>
-      <button onClick={onToggleDesktopSidebar} className="p-2.5 text-stone-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Open sidebar">
+      <button onClick={onToggleDesktopSidebar} className="p-2.5 shrink-0 text-stone-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Open sidebar">
         <PanelLeft className="w-5 h-5" />
       </button>
-      <div className="flex-1 flex flex-col items-center gap-1 overflow-y-auto">
-        <button onClick={() => { onNavigate('history'); onToggleDesktopSidebar?.(); }} className="p-2.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="Chat Archive">
+      <div
+        className="flex-1 min-h-0 flex flex-col items-center gap-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        <button onClick={() => { onNavigate('history'); onToggleDesktopSidebar?.(); }} className="p-2.5 shrink-0 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="Chat Archive">
           <History className="w-5 h-5" />
         </button>
-        {categories.slice(0, 8).map((cat) => (
-          <button key={`mini-${cat.id}`} onClick={() => { onSelectCategory(cat); onToggleDesktopSidebar?.(); }} className="p-2.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title={cat.name}>
+        {categories.map((cat) => (
+          <button key={`mini-${cat.id}`} onClick={() => { onSelectCategory(cat); onToggleDesktopSidebar?.(); }} className="p-2.5 shrink-0 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title={cat.name}>
             {getIcon(cat.iconName, 'w-5 h-5')}
           </button>
         ))}
-        <button onClick={() => { onNavigate('sales-agent'); onToggleDesktopSidebar?.(); }} className="p-2.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="AI Sales Agent">
+        <button onClick={() => { onNavigate('sales-agent'); onToggleDesktopSidebar?.(); }} className="p-2.5 shrink-0 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="AI Sales Agent">
           <Bot className="w-5 h-5" />
         </button>
       </div>
-      <div className="border-t border-stone-100 pt-2 flex flex-col items-center gap-1">
+      <div className="border-t border-stone-100 pt-2 flex flex-col items-center gap-1 shrink-0">
         {onLogout && (
           <button onClick={onLogout} className="p-2.5 rounded-lg hover:bg-red-50 text-stone-500 hover:text-red-600" title="Sign out">
             <LogOut className="w-4 h-4" />
