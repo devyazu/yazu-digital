@@ -8,7 +8,7 @@ import {
   Crown, Gem, Star, History, Code, Tag, Truck, Store,   Bot, LifeBuoy, MapPin, Gamepad2, Briefcase, Facebook, Music,
   PlayCircle, Camera, Shirt, Disc, Film, Edit3, Lock, MessageSquare,
   Gift, Book, Clipboard, Hash, Layers, GitMerge, Grid, Map,
-  Bell, Sticker
+  Bell, Sticker, PanelLeft, LogOut
 } from 'lucide-react';
 import { Category, Tool, UserProfile } from '../types';
 
@@ -87,9 +87,11 @@ interface SidebarProps {
   activeView: string;
   isOpen: boolean;
   isDesktopOpen: boolean;
+  onToggleDesktopSidebar?: () => void;
   favorites: string[];
   onToggleFavorite: (toolId: string) => void;
   user: UserProfile;
+  onLogout?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -101,9 +103,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   isOpen,
   isDesktopOpen,
+  onToggleDesktopSidebar,
   favorites,
   onToggleFavorite,
-  user
+  user,
+  onLogout,
 }) => {
   // Default expanded categories
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(['cat-visual', 'cat-ugc', 'cat-copy']));
@@ -144,6 +148,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     return allTools.filter(t => favorites.includes(t.id));
   };
 
+  // Mini sidebar: visible only on desktop when main sidebar is closed
+  const miniSidebarClasses = `hidden ${!isDesktopOpen ? 'lg:flex' : 'lg:hidden'} flex-col w-14 flex-shrink-0 border-r border-stone-200/60 bg-white/80 backdrop-blur-xl h-[calc(100vh-64px)] py-4 items-center gap-1 z-20`;
+
   const sidebarClasses = `
     fixed inset-y-0 left-0 z-30 bg-white/80 backdrop-blur-xl border-r border-white/40 shadow-[4px_0_24px_rgba(0,0,0,0.02)]
     transition-all duration-300 ease-in-out
@@ -153,6 +160,37 @@ const Sidebar: React.FC<SidebarProps> = ({
   `;
 
   return (
+    <>
+    {/* Mini icon bar when desktop sidebar is closed */}
+    <aside className={miniSidebarClasses}>
+      <button onClick={onToggleDesktopSidebar} className="p-2.5 text-stone-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Open sidebar">
+        <PanelLeft className="w-5 h-5" />
+      </button>
+      <div className="flex-1 flex flex-col items-center gap-1 overflow-y-auto">
+        <button onClick={() => { onNavigate('history'); onToggleDesktopSidebar?.(); }} className="p-2.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="Chat Archive">
+          <History className="w-5 h-5" />
+        </button>
+        {categories.slice(0, 8).map((cat) => (
+          <button key={`mini-${cat.id}`} onClick={() => { onSelectCategory(cat); onToggleDesktopSidebar?.(); }} className="p-2.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title={cat.name}>
+            {getIcon(cat.iconName, 'w-5 h-5')}
+          </button>
+        ))}
+        <button onClick={() => { onNavigate('sales-agent'); onToggleDesktopSidebar?.(); }} className="p-2.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="AI Sales Agent">
+          <Bot className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="border-t border-stone-100 pt-2 flex flex-col items-center gap-1">
+        <button onClick={() => { onNavigate('support'); onToggleDesktopSidebar?.(); }} className="p-2.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="Help & Support">
+          <LifeBuoy className="w-5 h-5" />
+        </button>
+        {onLogout && (
+          <button onClick={onLogout} className="p-2.5 rounded-lg hover:bg-red-50 text-stone-500 hover:text-red-600" title="Sign out">
+            <LogOut className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </aside>
+
     <aside className={sidebarClasses}>
       
       {/* 1. History & Favorites Header */}
@@ -308,7 +346,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
-      {/* Footer Actions */}
+      {/* Footer: Logout, Toggle, Help (icon only) */}
       <div className="p-4 border-t border-stone-200 space-y-2 min-w-[288px] lg:min-w-0">
          {/* Sales Agent Button */}
          <button 
@@ -322,15 +360,25 @@ const Sidebar: React.FC<SidebarProps> = ({
           {activeView !== 'sales-agent' && <span className="bg-brand-100 text-brand-700 text-[9px] px-1.5 py-0.5 rounded uppercase">New</span>}
          </button>
 
-         {/* Support */}
-         <button 
-            onClick={() => onNavigate('support')}
-            className="w-full flex items-center justify-center gap-2 py-2 text-stone-500 hover:text-stone-800 hover:bg-stone-50 rounded-lg text-sm font-medium transition-all"
-         >
-           <LifeBuoy className="w-4 h-4" /> Help & Support
-         </button>
+         {/* Logout (left), Sidebar toggle, Help (icon only) */}
+         <div className="flex items-center gap-1">
+           {onLogout && (
+             <button onClick={onLogout} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-all" title="Sign out">
+               <LogOut className="w-4 h-4" />
+             </button>
+           )}
+           {onToggleDesktopSidebar && (
+             <button onClick={onToggleDesktopSidebar} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-stone-800 hover:bg-stone-50 rounded-lg text-sm font-medium transition-all" title="Close sidebar">
+               <PanelLeft className="w-4 h-4" />
+             </button>
+           )}
+           <button onClick={() => onNavigate('support')} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-stone-800 hover:bg-stone-50 rounded-lg text-sm font-medium transition-all" title="Help & Support">
+             <LifeBuoy className="w-4 h-4" />
+           </button>
+         </div>
       </div>
     </aside>
+    </>
   );
 };
 

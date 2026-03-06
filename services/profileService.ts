@@ -5,6 +5,8 @@ export interface Profile {
   email_confirmed_at: string | null;
   created_at: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   company_name: string | null;
   job_title: string | null;
   avatar_url: string | null;
@@ -18,7 +20,7 @@ export async function getProfile(userId: string): Promise<{ profile: Profile | n
   if (!supabase) return { profile: null, error: new Error('Supabase not configured') };
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email_confirmed_at, created_at, full_name, company_name, job_title, avatar_url')
+    .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url')
     .eq('id', userId)
     .maybeSingle();
   return { profile: data as Profile | null, error: error ?? null };
@@ -26,6 +28,8 @@ export async function getProfile(userId: string): Promise<{ profile: Profile | n
 
 export interface ProfileUpdate {
   full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   company_name?: string | null;
   job_title?: string | null;
   avatar_url?: string | null;
@@ -42,9 +46,9 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
 
 export async function uploadAvatar(userId: string, file: File): Promise<{ url: string | null; error: Error | null }> {
   if (!supabase) return { url: null, error: new Error('Supabase not configured') };
-  if (file.size > AVATAR_MAX_SIZE) return { url: null, error: new Error('Dosya 1MB\'dan küçük olmalı') };
+  if (file.size > AVATAR_MAX_SIZE) return { url: null, error: new Error('File must be under 1MB') };
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  if (!['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(ext)) return { url: null, error: new Error('Sadece JPG, PNG, GIF veya WebP') };
+  if (!['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(ext)) return { url: null, error: new Error('Only JPG, PNG, GIF or WebP') };
   const path = `${userId}/avatar.${ext}`;
   const { error: uploadError } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, { upsert: true });
   if (uploadError) return { url: null, error: uploadError };

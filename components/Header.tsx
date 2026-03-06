@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Search, Zap, ChevronDown, Briefcase, Plus, Settings, PanelLeft, LogOut } from 'lucide-react';
+import { Menu, Search, Zap, ChevronDown, Briefcase, Plus, Settings, Bell } from 'lucide-react';
 import { UserProfile, Brand } from '../types';
+
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
   onToggleDesktopSidebar: () => void;
   user: UserProfile;
+  profileAvatarUrl?: string | null;
   brands: Brand[];
   currentBrand: Brand | null;
   brandsLoading?: boolean;
@@ -15,7 +18,7 @@ interface HeaderProps {
   searchQuery?: string;
   onSearchChange?: (value: string) => void;
   authEmail?: string;
-  onLogout?: () => void;
+  onOpenNotifications?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -24,6 +27,7 @@ const Header: React.FC<HeaderProps> = ({
   user, 
   brands, 
   currentBrand, 
+  profileAvatarUrl,
   brandsLoading = false,
   onBrandSelect, 
   onNavigate,
@@ -31,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({
   searchQuery = '',
   onSearchChange,
   authEmail,
-  onLogout,
+  onOpenNotifications,
 }) => {
   const creditPercent = (user.credits.used / user.credits.total) * 100;
   const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
@@ -49,23 +53,14 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="h-16 bg-white/80 backdrop-blur-xl border-b border-white/40 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-40 shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
-      {/* Left: Logo & Toggle */}
+      {/* Left: Logo (toggle moved to sidebar footer) */}
       <div className="flex items-center gap-4">
-        {/* Mobile Toggle */}
+        {/* Mobile: menu toggle */}
         <button 
           onClick={onToggleSidebar}
           className="p-2 -ml-2 text-stone-500 hover:bg-white/50 rounded-md lg:hidden"
         >
           <Menu className="w-6 h-6" />
-        </button>
-
-        {/* Desktop Toggle */}
-        <button 
-          onClick={onToggleDesktopSidebar}
-          className={`hidden lg:block p-2 text-stone-500 hover:bg-stone-100 rounded-md transition-colors ${!isDesktopSidebarOpen ? 'text-brand-600 bg-brand-50' : ''}`}
-          title={isDesktopSidebarOpen ? "Close Sidebar (Full Screen)" : "Open Sidebar"}
-        >
-          <PanelLeft className="w-5 h-5" />
         </button>
         
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()} title="Yazu">
@@ -79,7 +74,7 @@ const Header: React.FC<HeaderProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-hover:text-brand-500 transition-colors" />
           <input 
             type="text" 
-            placeholder="Araç ara (örn. Viral, TikTok, SEO)..." 
+            placeholder="Search tools (e.g. Viral, TikTok, SEO)..." 
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-stone-100/50 hover:bg-white focus:bg-white border border-transparent focus:border-brand-200 rounded-full text-sm text-stone-700 outline-none transition-all shadow-inner focus:shadow-md"
@@ -111,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({
             className="hidden sm:flex items-center gap-2 px-3 py-2 bg-white/50 hover:bg-white border border-stone-200/50 hover:border-brand-300 rounded-lg transition-all text-sm font-medium text-stone-700 shadow-sm backdrop-blur-sm"
           >
             {brandsLoading ? (
-              <span className="text-stone-400 text-xs">Yükleniyor...</span>
+              <span className="text-stone-400 text-xs">Loading...</span>
             ) : currentBrand ? (
               <>
                 {currentBrand.logoUrl ? (
@@ -124,7 +119,7 @@ const Header: React.FC<HeaderProps> = ({
             ) : (
               <>
                 <Briefcase className="w-4 h-4 text-brand-600" />
-                <span className="max-w-[100px] truncate">Marka seçin</span>
+                <span className="max-w-[100px] truncate">Select brand</span>
               </>
             )}
             <ChevronDown className="w-3 h-3 text-stone-400" />
@@ -183,30 +178,32 @@ const Header: React.FC<HeaderProps> = ({
 
         <div className="h-8 w-px bg-stone-200/50 mx-1 hidden sm:block"></div>
 
-        {/* Auth: e-posta + çıkış */}
+        {/* Notifications (left of avatar) */}
+        {onOpenNotifications && (
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            className="p-2 text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Auth: email */}
         {authEmail && (
           <div className="hidden sm:flex items-center gap-2 text-xs text-stone-500 max-w-[140px] truncate" title={authEmail}>
             {authEmail}
           </div>
         )}
-        {onLogout && (
-          <button
-            type="button"
-            onClick={onLogout}
-            className="p-2 text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
-            title="Çıkış yap"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        )}
         
-        {/* User Profile Avatar (Simplified) */}
+        {/* User Profile Avatar (same as Account Settings; from profile DB) */}
         <button 
           onClick={() => onNavigate('settings')}
           className="relative group p-0.5 rounded-full border-2 border-transparent hover:border-brand-200 transition-all"
         >
           <img 
-            src={user.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80"} 
+            src={profileAvatarUrl ?? user.avatarUrl ?? DEFAULT_AVATAR} 
             alt="User" 
             className="w-9 h-9 rounded-full object-cover shadow-sm group-hover:shadow-md transition-shadow"
           />

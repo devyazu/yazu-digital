@@ -25,7 +25,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignIn, onSignUp, isConfigured 
       setMessage({ type: 'error', text: error.message });
       return;
     }
-    if (mode === 'up') setMessage({ type: 'success', text: 'Hesap oluşturuldu. E-posta doğrulama linkini kontrol edin veya giriş yapın.' });
+    if (mode === 'up') setMessage({ type: 'success', text: 'Account created. Check your email for the verification link or sign in.' });
   };
 
   if (!isConfigured) {
@@ -35,12 +35,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignIn, onSignUp, isConfigured 
           <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-7 h-7 text-amber-600" />
           </div>
-          <h1 className="text-xl font-bold text-stone-800 mb-2">Supabase ayarlanmamış</h1>
+          <h1 className="text-xl font-bold text-stone-800 mb-2">Supabase not configured</h1>
           <p className="text-stone-600 text-sm">
-            Giriş ve arşiv için <code className="bg-stone-100 px-1 rounded">VITE_SUPABASE_URL</code> ve{' '}
-            <code className="bg-stone-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code> değerlerini .env.local dosyasına ekleyin.
+            Add <code className="bg-stone-100 px-1 rounded">VITE_SUPABASE_URL</code> and{' '}
+            <code className="bg-stone-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code> to .env.local for login and archive.
           </p>
-          <p className="text-stone-500 text-xs mt-4">Detay: SUPABASE_KURULUM.md</p>
+          <p className="text-stone-500 text-xs mt-4">See: SUPABASE_KURULUM.md</p>
         </div>
       </div>
     );
@@ -57,14 +57,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignIn, onSignUp, isConfigured 
         </div>
         <div className="bg-white rounded-2xl shadow-xl border border-stone-200 p-8">
           <h1 className="text-xl font-bold text-stone-800 mb-1">
-            {mode === 'in' ? 'Giriş yap' : 'Hesap oluştur'}
+            {mode === 'in' ? 'Sign in' : 'Create account'}
           </h1>
           <p className="text-stone-500 text-sm mb-6">
-            {mode === 'in' ? 'AI araçları ve chat arşivinize erişin.' : 'E-posta ve şifre ile kayıt olun.'}
+            {mode === 'in' ? 'Access AI tools and chat archive.' : 'Sign up with email and password.'}
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">E-posta</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                 <input
@@ -78,7 +78,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignIn, onSignUp, isConfigured 
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Şifre</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                 <input
@@ -103,7 +103,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignIn, onSignUp, isConfigured 
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-white bg-stone-900 hover:bg-stone-800 disabled:opacity-70 transition-colors"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-              {loading ? 'Bekleyin...' : mode === 'in' ? 'Giriş yap' : 'Kayıt ol'}
+              {loading ? 'Please wait...' : mode === 'in' ? 'Sign in' : 'Sign up'}
             </button>
           </form>
           <button
@@ -111,7 +111,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSignIn, onSignUp, isConfigured 
             onClick={() => { setMode(mode === 'in' ? 'up' : 'in'); setMessage(null); }}
             className="w-full mt-4 text-sm text-brand-600 hover:text-brand-700 font-medium"
           >
-            {mode === 'in' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
+            {mode === 'in' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
           </button>
         </div>
       </div>

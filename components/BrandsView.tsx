@@ -92,7 +92,7 @@ const BrandsView: React.FC<BrandsViewProps> = ({ brands, user, onSelectBrand, on
                       onClick={(e) => handleLogoClick(e, brand)}
                       onKeyDown={(e) => e.key === 'Enter' && handleLogoClick(e as unknown as React.MouseEvent, brand)}
                       className="relative w-16 h-16 rounded-xl overflow-hidden shadow-md group/logo cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-                      title={onUpdateBrandLogo ? 'Logo değiştir' : undefined}
+                      title={onUpdateBrandLogo ? 'Change logo' : undefined}
                     >
                         <img 
                             src={brand.logoUrl || "/yazu.svg"} 

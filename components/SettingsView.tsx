@@ -3,37 +3,62 @@ import { UserProfile, AccessLevel } from '../types';
 import { User, CreditCard, Shield, Bell, Check, Zap, AlertCircle, Plus, MapPin, Building, Loader2 } from 'lucide-react';
 import { getProfile, updateProfile, uploadAvatar, type Profile } from '../services/profileService';
 
+
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&q=80';
 
 interface SettingsViewProps {
   authUser: { id: string; email?: string };
   user: UserProfile;
+  profile: Profile | null;
+  onProfileUpdate: (profile: Profile) => void;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: profileProp, onProfileUpdate }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'billing'>('profile');
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [fullName, setFullName] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
+  const [profile, setProfileState] = useState<Profile | null>(profileProp ?? null);
+  const [profileLoading, setProfileLoading] = useState(!profileProp);
+  const [firstName, setFirstName] = useState(profileProp?.first_name ?? '');
+  const [lastName, setLastName] = useState(profileProp?.last_name ?? '');
+  const [fullName, setFullName] = useState(profileProp?.full_name ?? '');
+  const [companyName, setCompanyName] = useState(profileProp?.company_name ?? '');
+  const [jobTitle, setJobTitle] = useState(profileProp?.job_title ?? '');
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
+  const profileSource = profileProp ?? profile;
+  const setProfile = (p: Profile | null | ((prev: Profile | null) => Profile | null)) => {
+    const next = typeof p === 'function' ? p(profileSource) : p;
+    setProfileState(next);
+    if (next) onProfileUpdate(next);
+  };
+
   useEffect(() => {
+    if (profileProp) {
+      setProfileState(profileProp);
+      setFirstName(profileProp.first_name ?? '');
+      setLastName(profileProp.last_name ?? '');
+      setFullName(profileProp.full_name ?? '');
+      setCompanyName(profileProp.company_name ?? '');
+      setJobTitle(profileProp.job_title ?? '');
+      setProfileLoading(false);
+      return;
+    }
     let cancelled = false;
     getProfile(authUser.id).then(({ profile: p }) => {
       if (!cancelled && p) {
-        setProfile(p);
+        setProfileState(p);
+        setFirstName(p.first_name ?? '');
+        setLastName(p.last_name ?? '');
         setFullName(p.full_name ?? '');
         setCompanyName(p.company_name ?? '');
         setJobTitle(p.job_title ?? '');
+        onProfileUpdate(p);
       }
       if (!cancelled) setProfileLoading(false);
     });
     return () => { cancelled = true; };
-  }, [authUser.id]);
+  }, [authUser.id, profileProp?.id]);
 
   const plans = [
     {
@@ -65,18 +90,30 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user }) => {
   const handleSaveProfile = async () => {
     setMessage(null);
     setSaving(true);
+    const fullNameValue = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ') || null;
     const { error } = await updateProfile(authUser.id, {
-      full_name: fullName.trim() || null,
+      first_name: firstName.trim() || null,
+      last_name: lastName.trim() || null,
+      full_name: fullNameValue,
       company_name: companyName.trim() || null,
       job_title: jobTitle.trim() || null,
     });
     setSaving(false);
     if (error) {
-      setMessage({ type: 'err', text: error.message || 'Kaydedilemedi.' });
+      setMessage({ type: 'err', text: error.message || 'Could not save.' });
       return;
     }
-    setProfile((p) => (p ? { ...p, full_name: fullName.trim() || null, company_name: companyName.trim() || null, job_title: jobTitle.trim() || null } : p));
-    setMessage({ type: 'ok', text: 'Kaydedildi.' });
+    const updated: Profile = {
+      ...(profileSource ?? { id: authUser.id, email_confirmed_at: null, created_at: '', full_name: null, first_name: null, last_name: null, company_name: null, job_title: null, avatar_url: null }),
+      first_name: firstName.trim() || null,
+      last_name: lastName.trim() || null,
+      full_name: fullNameValue,
+      company_name: companyName.trim() || null,
+      job_title: jobTitle.trim() || null,
+    };
+    setProfileState(updated);
+    onProfileUpdate(updated);
+    setMessage({ type: 'ok', text: 'Saved.' });
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,12 +125,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user }) => {
     setAvatarUploading(false);
     e.target.value = '';
     if (error) {
-      setMessage({ type: 'err', text: error.message || 'Avatar yüklenemedi.' });
+      setMessage({ type: 'err', text: error.message || 'Avatar upload failed.' });
       return;
     }
-    if (url) {
-      setProfile((p) => (p ? { ...p, avatar_url: url } : p));
-      setMessage({ type: 'ok', text: 'Avatar güncellendi.' });
+    if (url && profileSource) {
+      const updated = { ...profileSource, avatar_url: url };
+      setProfileState(updated);
+      onProfileUpdate(updated);
+      setMessage({ type: 'ok', text: 'Avatar updated.' });
     }
   };
 
@@ -115,42 +154,46 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user }) => {
         <div className="flex items-center gap-6">
           <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white shadow-lg bg-stone-200">
             <img
-              src={profile?.avatar_url || DEFAULT_AVATAR}
+              src={profileSource?.avatar_url || DEFAULT_AVATAR}
               alt="Avatar"
               className="w-full h-full object-cover"
             />
           </div>
           <div>
             <label className="inline-block px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 text-stone-700 shadow-sm transition-all cursor-pointer">
-              {avatarUploading ? 'Yükleniyor...' : 'Change Avatar'}
+              {avatarUploading ? 'Uploading...' : 'Change Avatar'}
               <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleAvatarChange} disabled={avatarUploading} />
             </label>
-            <p className="text-xs text-stone-400 mt-2">JPG, GIF veya PNG. Maks. 1MB.</p>
+            <p className="text-xs text-stone-400 mt-2">JPG, PNG, GIF or WebP. Max 1MB.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Full Name</label>
-            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Ad Soyad" />
+            <label className="block text-sm font-medium text-stone-700 mb-1">First Name</label>
+            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="First name" />
           </div>
           <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Last Name</label>
+            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Last name" />
+          </div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-stone-700 mb-1">Email Address</label>
             <input type="email" value={authUser.email ?? ''} readOnly className="w-full px-4 py-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-500 outline-none" />
           </div>
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">Company Name</label>
-            <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Şirket adı" />
+            <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Company name" />
           </div>
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">Job Title</label>
-            <input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="İş unvanı" />
+            <input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Job title" />
           </div>
         </div>
 
         <div className="pt-6 border-t border-stone-200 flex justify-end">
           <button onClick={handleSaveProfile} disabled={saving} className="px-6 py-2 bg-brand-600 text-white font-medium rounded-lg hover:bg-brand-700 transition-colors shadow-sm disabled:opacity-50">
-            {saving ? 'Kaydediliyor...' : 'Save Changes'}
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -376,11 +419,10 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user }) => {
             >
               <CreditCard className="w-4 h-4" /> Billing
             </button>
-            <button 
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors"
-            >
-              <Bell className="w-4 h-4" /> Notifications
-            </button>
+            {/* Notifications: opened from header bell */}
+            <span className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-stone-400">
+              <Bell className="w-4 h-4" /> Notifications (use bell in header)
+            </span>
           </div>
 
           {/* Content Area */}

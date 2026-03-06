@@ -17,9 +17,11 @@ import SupportView from './components/SupportView';
 import SalesAgentView from './components/SalesAgentView';
 import LoginPage from './components/LoginPage';
 import ChatArchiveView from './components/ChatArchiveView';
+import NotificationsPanel from './components/NotificationsPanel';
 import { CATEGORIES as INITIAL_CATEGORIES, MOCK_USER } from './data';
 import { Tool, Brand, Category, SalesAgentConfig } from './types';
 import { getBrands, createBrand, uploadBrandLogo } from './services/brandService';
+import { getProfile, type Profile } from './services/profileService';
 
 function filterCategoriesBySearch(categories: Category[], query: string): Category[] {
   const q = query.trim().toLowerCase();
@@ -86,6 +88,13 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     });
   }, [authUser?.id]);
 
+  // Profile (avatar sync: Header + Settings, persists on refresh)
+  const [profile, setProfile] = useState<Profile | null>(null);
+  useEffect(() => {
+    if (!authUser) return;
+    getProfile(authUser.id).then(({ profile: p }) => p && setProfile(p));
+  }, [authUser?.id]);
+
   // User State
   const [favorites, setFavorites] = useState<string[]>([]);
 
@@ -95,6 +104,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [targetUpgradeTier, setTargetUpgradeTier] = useState<'pro' | 'premium'>('premium');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const handleToggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -208,6 +218,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         onToggleSidebar={handleToggleSidebar} 
         onToggleDesktopSidebar={handleToggleDesktopSidebar}
         user={MOCK_USER}
+        profileAvatarUrl={profile?.avatar_url ?? undefined}
         brands={brands}
         currentBrand={currentBrand}
         brandsLoading={brandsLoading}
@@ -217,7 +228,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         authEmail={authUser.email}
-        onLogout={onLogout}
+        onOpenNotifications={() => setNotificationsOpen(true)}
       />
       
       <div className="flex flex-1 relative overflow-hidden z-10">
@@ -238,9 +249,11 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           activeView={view}
           isOpen={isSidebarOpen}
           isDesktopOpen={isDesktopSidebarOpen}
+          onToggleDesktopSidebar={handleToggleDesktopSidebar}
           favorites={favorites}
           onToggleFavorite={handleToggleFavorite}
           user={MOCK_USER}
+          onLogout={onLogout}
         />
         
         {view === 'home' && (
@@ -289,7 +302,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         {view === 'sales-agent' && !currentBrand && (
           <div className="flex-1 flex items-center justify-center p-10">
             <div className="text-center text-stone-500">
-              <p className="font-medium mb-2">Önce bir marka seçin</p>
+              <p className="font-medium mb-2">Select a brand first</p>
               <button onClick={() => handleNavigate('brands-list')} className="text-brand-600 hover:underline">My Brands</button>
             </div>
           </div>
@@ -300,7 +313,12 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         )}
 
         {view === 'settings' && (
-          <SettingsView authUser={authUser} user={MOCK_USER} />
+          <SettingsView 
+            authUser={authUser} 
+            user={MOCK_USER} 
+            profile={profile}
+            onProfileUpdate={setProfile}
+          />
         )}
 
         {view === 'tool' && selectedTool && currentBrand && (
@@ -316,7 +334,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         {view === 'tool' && selectedTool && !currentBrand && (
           <div className="flex-1 flex items-center justify-center p-10">
             <div className="text-center text-stone-500">
-              <p className="font-medium mb-2">Araç kullanmak için önce bir marka seçin</p>
+              <p className="font-medium mb-2">Select a brand to use tools</p>
               <button onClick={() => handleNavigate('brands-list')} className="text-brand-600 hover:underline">My Brands</button>
             </div>
           </div>
@@ -326,6 +344,10 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           <ChatArchiveView userId={authUser.id} />
         )}
       </div>
+
+      {notificationsOpen && (
+        <NotificationsPanel onClose={() => setNotificationsOpen(false)} />
+      )}
 
       {isUpgradeModalOpen && (
         <UpgradeModal 

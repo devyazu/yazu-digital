@@ -51,7 +51,7 @@ const ChatArchiveView: React.FC<ChatArchiveViewProps> = ({ userId }) => {
   if (error) {
     return (
       <div className="flex-1 p-10 flex flex-col items-center justify-center text-stone-500">
-        <p className="text-red-600 font-medium">Yüklenemedi</p>
+        <p className="text-red-600 font-medium">Failed to load</p>
         <p className="text-sm mt-1">{error}</p>
       </div>
     );
@@ -64,7 +64,7 @@ const ChatArchiveView: React.FC<ChatArchiveViewProps> = ({ userId }) => {
           <FileText className="w-8 h-8 text-stone-400" />
         </div>
         <h3 className="text-xl font-bold text-stone-600 mb-2">Chat Archive</h3>
-        <p>Henüz kayıt yok. Araçlarda üretim yaptıkça burada listelenecek.</p>
+        <p>No entries yet. They will appear here as you use the tools.</p>
       </div>
     );
   }
@@ -73,7 +73,7 @@ const ChatArchiveView: React.FC<ChatArchiveViewProps> = ({ userId }) => {
     <div className="flex-1 overflow-y-auto p-6 lg:p-10">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-2xl font-bold text-stone-800 mb-2">Chat Archive</h2>
-        <p className="text-stone-500 text-sm mb-6">AI aracı yazışmalarınız</p>
+        <p className="text-stone-500 text-sm mb-6">Your AI tool conversations</p>
         <ul className="space-y-4">
           {items.map((row) => {
             const isExpanded = expandedId === row.id;
@@ -97,13 +97,13 @@ const ChatArchiveView: React.FC<ChatArchiveViewProps> = ({ userId }) => {
                     </div>
                   </div>
                   <span className="text-stone-400 text-sm shrink-0 ml-2">
-                    {isExpanded ? 'Daralt' : 'Genişlet'}
+                    {isExpanded ? 'Collapse' : 'Expand'}
                   </span>
                 </button>
                 {isExpanded && (
                   <div className="px-5 pb-5 pt-0 border-t border-stone-100 space-y-4">
                     <div>
-                      <p className="text-xs font-semibold text-stone-400 uppercase mb-1">Girdi</p>
+                      <p className="text-xs font-semibold text-stone-400 uppercase mb-1">Input</p>
                       <p className="text-sm text-stone-700 bg-stone-50 rounded-lg p-3 whitespace-pre-wrap">
                         {row.input}
                       </p>
@@ -112,11 +112,11 @@ const ChatArchiveView: React.FC<ChatArchiveViewProps> = ({ userId }) => {
                         onClick={() => copyToClipboard(row.input)}
                         className="mt-1 text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
                       >
-                        <Copy className="w-3 h-3" /> Kopyala
+                        <Copy className="w-3 h-3" /> Copy
                       </button>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-stone-400 uppercase mb-1">Çıktı</p>
+                      <p className="text-xs font-semibold text-stone-400 uppercase mb-1">Output</p>
                       <p className="text-sm text-stone-700 bg-stone-50 rounded-lg p-3 whitespace-pre-wrap max-h-60 overflow-y-auto">
                         {row.output}
                       </p>
@@ -125,7 +125,7 @@ const ChatArchiveView: React.FC<ChatArchiveViewProps> = ({ userId }) => {
                         onClick={() => copyToClipboard(row.output)}
                         className="mt-1 text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
                       >
-                        <Copy className="w-3 h-3" /> Kopyala
+                        <Copy className="w-3 h-3" /> Copy
                       </button>
                     </div>
                   </div>
