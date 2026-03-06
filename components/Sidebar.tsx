@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ChevronDown, ChevronRight, LayoutGrid, Sparkles,
   BrainCircuit, Target, MousePointerClick, TrendingUp, 
@@ -81,6 +81,7 @@ const getIcon = (name: string, className?: string) => {
 interface SidebarProps {
   categories: Category[];
   selectedTool: Tool | null;
+  selectedCategory: Category | null;
   onSelectTool: (tool: Tool) => void;
   onSelectCategory: (category: Category) => void;
   onNavigate: (view: 'home' | 'tool' | 'history' | 'brands-list' | 'brand-connect' | 'settings' | 'sales-agent' | 'support') => void;
@@ -97,6 +98,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ 
   categories, 
   selectedTool, 
+  selectedCategory,
   onSelectTool, 
   onSelectCategory, 
   onNavigate,
@@ -113,6 +115,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(['cat-visual', 'cat-ugc', 'cat-copy']));
   // Pagination state
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
+  const selectedCategoryRowRef = useRef<HTMLDivElement>(null);
+
+  // When sidebar opens (desktop) with a selected category (e.g. from mini bar click), expand it and scroll into view
+  useEffect(() => {
+    if (!isDesktopOpen || !selectedCategory) return;
+    setExpandedCats(prev => new Set([...prev, selectedCategory.id]));
+    const t = setTimeout(() => {
+      selectedCategoryRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [isDesktopOpen, selectedCategory?.id]);
 
   const toggleCategory = (catId: string) => {
     const newSet = new Set(expandedCats);
@@ -241,13 +254,13 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {categories.map((category) => {
           const isExpanded = expandedCats.has(category.id);
-          const isActiveCategory = selectedTool && category.tools.find(t => t.id === selectedTool.id);
+          const isActiveCategory = (selectedTool && category.tools.find(t => t.id === selectedTool.id)) || selectedCategory?.id === category.id;
           const currentLimit = visibleCounts[category.id] || 5;
           const displayTools = category.tools.slice(0, currentLimit);
           const hasMore = category.tools.length > currentLimit;
           
           return (
-            <div key={category.id} className="px-3">
+            <div key={category.id} ref={selectedCategory?.id === category.id ? selectedCategoryRowRef : undefined} className="px-3">
               <div 
                 className={`
                   w-full flex items-center justify-between p-2 rounded-xl transition-all duration-200 cursor-pointer

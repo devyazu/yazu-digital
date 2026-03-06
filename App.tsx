@@ -242,6 +242,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         <Sidebar 
           categories={categories} 
           selectedTool={selectedTool} 
+          selectedCategory={selectedCategory}
           onSelectTool={handleSelectTool}
           onSelectCategory={handleSelectCategory}
           onNavigate={handleNavigate}
