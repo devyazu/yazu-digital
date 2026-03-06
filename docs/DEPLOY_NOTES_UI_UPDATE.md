@@ -12,7 +12,10 @@ After pulling this update:
 2. **Run migration 009 (notifications)**  
    Run the contents of `supabase/migrations/009_notifications.sql` to create the `notifications` table used by the admin notifications feature and the user notifications panel.
 
-3. Avatars and brand logos use existing buckets and tables.
+3. **Run migration 011 (notification reads – unread badge)**  
+   Run the contents of `supabase/migrations/011_notification_reads.sql` so the header bell shows the unread count and “mark as read” works when the user opens the notifications panel.
+
+4. Avatars and brand logos use existing buckets and tables.
 
 ## Vercel
 
@@ -24,6 +27,6 @@ After pulling this update:
 - **Avatar:** Header and Account Settings share DB profile; avatar update propagates and persists. Image key forces refresh when URL changes.
 - **Profile:** First / last name; Notifications tab removed from Settings.
 - **Help & Support:** Moved to Account Settings as a tab; removed from sidebar footer.
-- **Notifications:** Narrower side panel (max 320px). Mock data removed; list comes from DB (admin-created notifications). Admin panel has a “Notifications” section to create notifications and choose target (all users or selected users).
+- **Notifications:** Unread count badge on header bell (1, 2, … or 99+). Opening the notifications panel marks all as read and updates the badge. Narrower side panel (max 320px). List from DB (admin-created). Admin: create notifications, target “all users” or “selected users”; list shows “All users” or “Selected users (N)”.
 - **Header:** User email removed from top right.
 - **Sidebar:** Logout and sidebar toggle only in footer; Help removed.

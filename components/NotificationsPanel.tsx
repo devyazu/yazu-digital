@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Bell, X, Loader2 } from 'lucide-react';
-import { getNotificationsForUser, type NotificationRow } from '../services/notificationsService';
+import { getNotificationsForUser, markAllNotificationsAsRead, type NotificationRow } from '../services/notificationsService';
 
 interface NotificationsPanelProps {
   onClose: () => void;
+  onMarkAllRead?: () => void;
 }
 
 function formatTime(iso: string) {
@@ -17,14 +18,21 @@ function formatTime(iso: string) {
   return d.toLocaleDateString();
 }
 
-const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ onClose }) => {
+const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ onClose, onMarkAllRead }) => {
   const [list, setList] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const markedReadRef = useRef(false);
 
   useEffect(() => {
     getNotificationsForUser().then(({ data }) => {
       setList(data ?? []);
       setLoading(false);
+      if ((data?.length ?? 0) > 0 && !markedReadRef.current) {
+        markedReadRef.current = true;
+        markAllNotificationsAsRead().then(() => {
+          onMarkAllRead?.();
+        });
+      }
     });
   }, []);
 

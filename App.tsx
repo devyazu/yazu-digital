@@ -21,6 +21,7 @@ import { CATEGORIES as INITIAL_CATEGORIES, MOCK_USER } from './data';
 import { Tool, Brand, Category, SalesAgentConfig } from './types';
 import { getBrands, createBrand, uploadBrandLogo } from './services/brandService';
 import { getProfile, type Profile } from './services/profileService';
+import { getUnreadNotificationCount } from './services/notificationsService';
 
 function filterCategoriesBySearch(categories: Category[], query: string): Category[] {
   const q = query.trim().toLowerCase();
@@ -104,6 +105,18 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [targetUpgradeTier, setTargetUpgradeTier] = useState<'pro' | 'premium'>('premium');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  const fetchUnreadNotificationCount = () => {
+    getUnreadNotificationCount().then(({ count, error }) => {
+      if (!error) setUnreadNotificationCount(count);
+    });
+  };
+
+  useEffect(() => {
+    if (!authUser) return;
+    fetchUnreadNotificationCount();
+  }, [authUser?.id]);
 
   const handleToggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -228,6 +241,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         onSearchChange={setSearchQuery}
         authEmail={authUser.email}
         onOpenNotifications={() => setNotificationsOpen(true)}
+        unreadNotificationCount={unreadNotificationCount}
       />
       
       <div className="flex flex-1 relative overflow-hidden z-10">
@@ -342,7 +356,13 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
       </div>
 
       {notificationsOpen && (
-        <NotificationsPanel onClose={() => setNotificationsOpen(false)} />
+        <NotificationsPanel
+          onClose={() => {
+            setNotificationsOpen(false);
+            fetchUnreadNotificationCount();
+          }}
+          onMarkAllRead={fetchUnreadNotificationCount}
+        />
       )}
 
       {isUpgradeModalOpen && (

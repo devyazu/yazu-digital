@@ -19,6 +19,7 @@ interface HeaderProps {
   onSearchChange?: (value: string) => void;
   authEmail?: string;
   onOpenNotifications?: () => void;
+  unreadNotificationCount?: number;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -36,6 +37,7 @@ const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   authEmail,
   onOpenNotifications,
+  unreadNotificationCount = 0,
 }) => {
   const creditPercent = (user.credits.used / user.credits.total) * 100;
   const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
@@ -178,15 +180,20 @@ const Header: React.FC<HeaderProps> = ({
 
         <div className="h-8 w-px bg-stone-200/50 mx-1 hidden sm:block"></div>
 
-        {/* Notifications (left of avatar) */}
+        {/* Notifications (left of avatar) — badge shows unread count */}
         {onOpenNotifications && (
           <button
             type="button"
             onClick={onOpenNotifications}
-            className="p-2 text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
-            title="Notifications"
+            className="relative p-2 text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
+            title={unreadNotificationCount > 0 ? `${unreadNotificationCount} unread notification(s)` : 'Notifications'}
           >
             <Bell className="w-4 h-4" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-brand-500 text-white text-[10px] font-bold px-1">
+                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+              </span>
+            )}
           </button>
         )}
         

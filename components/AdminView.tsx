@@ -586,7 +586,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                 <p className="font-medium text-stone-800 text-sm">{n.title}</p>
                 <p className="text-stone-600 text-xs mt-0.5 line-clamp-2">{n.body}</p>
                 <p className="text-xs text-stone-400 mt-2">
-                  {new Date(n.created_at).toLocaleString()} · {n.target_type === 'all' ? 'All users' : 'Selected users'}
+                  {new Date(n.created_at).toLocaleString()} · {n.target_type === 'all' ? 'All users' : `Selected users (${(n.target_user_ids?.length ?? 0)})`}
                 </p>
               </li>
             ))}
