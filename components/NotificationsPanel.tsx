@@ -1,42 +1,59 @@
-import React from 'react';
-import { Bell, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Bell, X, Loader2 } from 'lucide-react';
+import { getNotificationsForUser, type NotificationRow } from '../services/notificationsService';
 
 interface NotificationsPanelProps {
   onClose: () => void;
 }
 
-const MOCK_NOTIFICATIONS = [
-  { id: '1', title: 'Credit usage', body: 'You have used 45% of your monthly credits.', time: '2 hours ago', read: false },
-  { id: '2', title: 'Brand connected', body: 'Urban Sneakers Co. – 3 sources connected.', time: '1 day ago', read: true },
-  { id: '3', title: 'New tool available', body: 'TikTok Hook Generator is now available in Visual Studio.', time: '3 days ago', read: true },
-];
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  const now = Date.now();
+  const diff = now - d.getTime();
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
+  return d.toLocaleDateString();
+}
 
 const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ onClose }) => {
+  const [list, setList] = useState<NotificationRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getNotificationsForUser().then(({ data }) => {
+      setList(data ?? []);
+      setLoading(false);
+    });
+  }, []);
+
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40 lg:bg-transparent" onClick={onClose} aria-hidden />
-      <div className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white shadow-xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200">
-          <h2 className="text-lg font-bold text-stone-800 flex items-center gap-2">
-            <Bell className="w-5 h-5 text-brand-600" /> Notifications
+      <div className="fixed top-0 right-0 bottom-0 w-full max-w-[320px] bg-white shadow-xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200">
+          <h2 className="text-base font-bold text-stone-800 flex items-center gap-2">
+            <Bell className="w-4 h-4 text-brand-600" /> Notifications
           </h2>
           <button onClick={onClose} className="p-2 text-stone-500 hover:bg-stone-100 rounded-lg" aria-label="Close">
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          {MOCK_NOTIFICATIONS.length === 0 ? (
+        <div className="flex-1 overflow-y-auto p-3">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 text-brand-500 animate-spin" />
+            </div>
+          ) : list.length === 0 ? (
             <p className="text-stone-500 text-sm text-center py-8">No notifications yet.</p>
           ) : (
             <ul className="space-y-2">
-              {MOCK_NOTIFICATIONS.map((n) => (
-                <li
-                  key={n.id}
-                  className={`p-4 rounded-xl border text-left ${n.read ? 'bg-stone-50/50 border-stone-100' : 'bg-brand-50/30 border-brand-100'}`}
-                >
+              {list.map((n) => (
+                <li key={n.id} className="p-3 rounded-xl border border-stone-100 bg-stone-50/50 text-left">
                   <p className="font-medium text-stone-800 text-sm">{n.title}</p>
-                  <p className="text-stone-600 text-sm mt-0.5">{n.body}</p>
-                  <p className="text-xs text-stone-400 mt-2">{n.time}</p>
+                  <p className="text-stone-600 text-xs mt-0.5 line-clamp-3">{n.body}</p>
+                  <p className="text-xs text-stone-400 mt-2">{formatTime(n.created_at)}</p>
                 </li>
               ))}
             </ul>

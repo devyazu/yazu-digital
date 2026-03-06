@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, AccessLevel } from '../types';
-import { User, CreditCard, Shield, Bell, Check, Zap, AlertCircle, Plus, MapPin, Building, Loader2 } from 'lucide-react';
+import { User, CreditCard, Shield, Check, Zap, Plus, MapPin, Building, Loader2, LifeBuoy } from 'lucide-react';
+import SupportView from './SupportView';
 import { getProfile, updateProfile, uploadAvatar, type Profile } from '../services/profileService';
 
 
@@ -14,7 +15,7 @@ interface SettingsViewProps {
 }
 
 const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: profileProp, onProfileUpdate }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'billing'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'billing' | 'support'>('profile');
   const [profile, setProfileState] = useState<Profile | null>(profileProp ?? null);
   const [profileLoading, setProfileLoading] = useState(!profileProp);
   const [firstName, setFirstName] = useState(profileProp?.first_name ?? '');
@@ -128,8 +129,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: pr
       setMessage({ type: 'err', text: error.message || 'Avatar upload failed.' });
       return;
     }
-    if (url && profileSource) {
-      const updated = { ...profileSource, avatar_url: url };
+    if (url) {
+      const updated: Profile = {
+        ...(profileSource ?? { id: authUser.id, email_confirmed_at: null, created_at: '', full_name: null, first_name: null, last_name: null, company_name: null, job_title: null, avatar_url: null }),
+        avatar_url: url,
+      };
       setProfileState(updated);
       onProfileUpdate(updated);
       setMessage({ type: 'ok', text: 'Avatar updated.' });
@@ -419,10 +423,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: pr
             >
               <CreditCard className="w-4 h-4" /> Billing
             </button>
-            {/* Notifications: opened from header bell */}
-            <span className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-stone-400">
-              <Bell className="w-4 h-4" /> Notifications (use bell in header)
-            </span>
+            <button 
+              onClick={() => setActiveTab('support')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === 'support' ? 'bg-white shadow-sm text-brand-600 ring-1 ring-stone-200' : 'text-stone-600 hover:bg-stone-100'}`}
+            >
+              <LifeBuoy className="w-4 h-4" /> Help & Support
+            </button>
           </div>
 
           {/* Content Area */}
@@ -430,6 +436,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: pr
             {activeTab === 'profile' && renderProfile()}
             {activeTab === 'subscription' && renderSubscription()}
             {activeTab === 'billing' && renderBilling()}
+            {activeTab === 'support' && (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                <SupportView />
+              </div>
+            )}
           </div>
         </div>
       </div>

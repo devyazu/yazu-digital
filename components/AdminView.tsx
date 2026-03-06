@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Tool, UserProfile, AdminStats } from '../types';
 import { 
-  LayoutDashboard, Users, Wrench, FolderOpen, Mail,
+  LayoutDashboard, Users, Wrench, FolderOpen, Mail, Bell,
   Search, Plus, Edit, Trash2, CheckCircle, XCircle, 
   BarChart3, DollarSign, Zap, Play, Settings, TrendingUp,
   Activity, ArrowUpRight, Globe, Loader2
@@ -30,7 +30,7 @@ interface AdminViewProps {
 
 const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit }) => {
   const { session } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail'>('tools');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail' | 'notifications'>('tools');
   const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS_LIST);
   // E-posta şablonları
   const [emailTemplates, setEmailTemplates] = useState<Array<{ id: string; slug: string; name: string; description: string | null; subject: string; body_html: string; body_json: string | null; from_name: string | null; recipient_type: string; is_active: boolean; updated_at: string }>>([]);
@@ -50,13 +50,21 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersSearch, setUsersSearch] = useState('');
+  const [notificationsList, setNotificationsList] = useState<Array<{ id: string; title: string; body: string; created_at: string; target_type: string; target_user_ids: string[] | null }>>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifBody, setNotifBody] = useState('');
+  const [notifTargetType, setNotifTargetType] = useState<'all' | 'selected'>('all');
+  const [notifSelectedIds, setNotifSelectedIds] = useState<string[]>([]);
+  const [notifSending, setNotifSending] = useState(false);
+  const [notifError, setNotifError] = useState<string | null>(null);
   
   // Tool Editor State
   const [isEditingTool, setIsEditingTool] = useState(false);
   const [editingTool, setEditingTool] = useState<Partial<Tool>>({});
   
   useEffect(() => {
-    if (activeTab !== 'users' || !session?.access_token) return;
+    if ((activeTab !== 'users' && activeTab !== 'notifications') || !session?.access_token) return;
     setUsersLoading(true);
     setUsersError(null);
     fetch('/api/list-users', {
@@ -103,6 +111,51 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       })
       .finally(() => setEmailTemplatesLoading(false));
   }, [activeTab, session?.access_token]);
+
+  useEffect(() => {
+    if (activeTab !== 'notifications' || !session?.access_token) return;
+    setNotificationsLoading(true);
+    fetch('/api/admin/notifications', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      .then((r) => r.json())
+      .then((data) => {
+        setNotificationsList(data.notifications || []);
+      })
+      .catch(() => setNotificationsList([]))
+      .finally(() => setNotificationsLoading(false));
+  }, [activeTab, session?.access_token]);
+
+  const handleCreateNotification = () => {
+    if (!notifTitle.trim() || !notifBody.trim()) {
+      setNotifError('Title and body are required');
+      return;
+    }
+    if (notifTargetType === 'selected' && notifSelectedIds.length === 0) {
+      setNotifError('Select at least one user when targeting selected users');
+      return;
+    }
+    setNotifError(null);
+    setNotifSending(true);
+    fetch('/api/admin/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({
+        title: notifTitle.trim(),
+        body: notifBody.trim(),
+        target_type: notifTargetType,
+        target_user_ids: notifTargetType === 'selected' ? notifSelectedIds : [],
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        setNotifTitle('');
+        setNotifBody('');
+        setNotifSelectedIds([]);
+        setNotificationsList((prev) => [data.notification, ...prev]);
+      })
+      .catch((e) => setNotifError(e?.message || 'Failed to send'))
+      .finally(() => setNotifSending(false));
+  };
 
   useEffect(() => {
     const t = emailTemplates.find((x) => x.slug === selectedTemplateSlug);
@@ -447,6 +500,99 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
           </tbody>
         </table>
       )}
+    </div>
+  );
+
+  const renderNotifications = () => (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+        <h3 className="font-bold text-stone-800 mb-4 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-brand-600" /> Send notification
+        </h3>
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          <div>
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1">Title</label>
+            <input
+              type="text"
+              value={notifTitle}
+              onChange={(e) => setNotifTitle(e.target.value)}
+              placeholder="Notification title"
+              className="w-full px-4 py-2 rounded-lg border border-stone-200 outline-none focus:border-brand-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1">Body</label>
+            <textarea
+              value={notifBody}
+              onChange={(e) => setNotifBody(e.target.value)}
+              placeholder="Message content"
+              rows={3}
+              className="w-full px-4 py-2 rounded-lg border border-stone-200 outline-none focus:border-brand-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1">Send to</label>
+            <select
+              value={notifTargetType}
+              onChange={(e) => setNotifTargetType(e.target.value as 'all' | 'selected')}
+              className="w-full px-4 py-2 rounded-lg border border-stone-200 outline-none focus:border-brand-400"
+            >
+              <option value="all">All users</option>
+              <option value="selected">Selected users only</option>
+            </select>
+          </div>
+          {notifTargetType === 'selected' && (
+            <div>
+              <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1">Select users</label>
+              <div className="max-h-48 overflow-y-auto border border-stone-200 rounded-lg p-2 space-y-1">
+                {realUsers.map((u) => (
+                  <label key={u.id} className="flex items-center gap-2 cursor-pointer hover:bg-stone-50 p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={notifSelectedIds.includes(u.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setNotifSelectedIds((prev) => [...prev, u.id]);
+                        else setNotifSelectedIds((prev) => prev.filter((id) => id !== u.id));
+                      }}
+                    />
+                    <span className="text-sm text-stone-700">{u.email}</span>
+                    {u.full_name && <span className="text-xs text-stone-400">({u.full_name})</span>}
+                  </label>
+                ))}
+                {realUsers.length === 0 && !usersLoading && <p className="text-stone-400 text-sm p-2">No users found.</p>}
+              </div>
+            </div>
+          )}
+        </div>
+        {notifError && <p className="text-red-600 text-sm mb-2">{notifError}</p>}
+        <button
+          onClick={handleCreateNotification}
+          disabled={notifSending}
+          className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50"
+        >
+          {notifSending ? 'Sending...' : 'Send notification'}
+        </button>
+      </div>
+      <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+        <h3 className="font-bold text-stone-800 p-4 border-b border-stone-100">Sent notifications</h3>
+        {notificationsLoading ? (
+          <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 text-brand-500 animate-spin" /></div>
+        ) : notificationsList.length === 0 ? (
+          <p className="p-6 text-stone-500 text-sm text-center">No notifications sent yet.</p>
+        ) : (
+          <ul className="divide-y divide-stone-100">
+            {notificationsList.map((n) => (
+              <li key={n.id} className="p-4">
+                <p className="font-medium text-stone-800 text-sm">{n.title}</p>
+                <p className="text-stone-600 text-xs mt-0.5 line-clamp-2">{n.body}</p>
+                <p className="text-xs text-stone-400 mt-2">
+                  {new Date(n.created_at).toLocaleString()} · {n.target_type === 'all' ? 'All users' : 'Selected users'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 
@@ -915,8 +1061,14 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                  onClick={() => setActiveTab('mail')}
                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'mail' ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100'}`}
                >
-                 <Mail className="w-4 h-4" /> E-posta
-               </button>
+<Mail className="w-4 h-4" /> E-posta
+              </button>
+              <button
+                onClick={() => setActiveTab('notifications')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'notifications' ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100'}`}
+              >
+                <Bell className="w-4 h-4" /> Notifications
+              </button>
             </nav>
             <div className="mt-auto p-6 border-t border-stone-200">
                <div className="text-xs text-stone-400 font-mono">v2.5.0 (Build 9001)</div>
@@ -932,6 +1084,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
             {activeTab === 'tools' && renderTools()}
             {activeTab === 'categories' && renderCategories()}
             {activeTab === 'mail' && renderMail()}
+            {activeTab === 'notifications' && renderNotifications()}
          </div>
       </div>
     </div>

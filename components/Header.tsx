@@ -189,13 +189,6 @@ const Header: React.FC<HeaderProps> = ({
             <Bell className="w-4 h-4" />
           </button>
         )}
-
-        {/* Auth: email */}
-        {authEmail && (
-          <div className="hidden sm:flex items-center gap-2 text-xs text-stone-500 max-w-[140px] truncate" title={authEmail}>
-            {authEmail}
-          </div>
-        )}
         
         {/* User Profile Avatar (same as Account Settings; from profile DB) */}
         <button 
@@ -203,6 +196,7 @@ const Header: React.FC<HeaderProps> = ({
           className="relative group p-0.5 rounded-full border-2 border-transparent hover:border-brand-200 transition-all"
         >
           <img 
+            key={profileAvatarUrl ?? 'default'}
             src={profileAvatarUrl ?? user.avatarUrl ?? DEFAULT_AVATAR} 
             alt="User" 
             className="w-9 h-9 rounded-full object-cover shadow-sm group-hover:shadow-md transition-shadow"

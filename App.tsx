@@ -13,7 +13,6 @@ import CategoryView from './components/CategoryView';
 import UpgradeModal from './components/UpgradeModal';
 import AdminGate from './components/AdminGate';
 import EmailConfirmGate from './components/EmailConfirmGate';
-import SupportView from './components/SupportView';
 import SalesAgentView from './components/SalesAgentView';
 import LoginPage from './components/LoginPage';
 import ChatArchiveView from './components/ChatArchiveView';
@@ -306,10 +305,6 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
               <button onClick={() => handleNavigate('brands-list')} className="text-brand-600 hover:underline">My Brands</button>
             </div>
           </div>
-        )}
-
-        {view === 'support' && (
-          <SupportView />
         )}
 
         {view === 'settings' && (

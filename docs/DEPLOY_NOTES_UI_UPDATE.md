@@ -7,19 +7,23 @@ After pulling this update:
 1. **Run migration 008 (profiles first/last name)**  
    In Supabase Dashboard → SQL Editor, run the contents of:
    - `supabase/migrations/008_profiles_first_last.sql`  
-   This adds `first_name` and `last_name` to `profiles`. Existing rows keep `full_name`; new profile form uses first/last.
+   This adds `first_name` and `last_name` to `profiles`.
 
-2. No other Supabase changes required. Avatars and brand logos use existing buckets and tables.
+2. **Run migration 009 (notifications)**  
+   Run the contents of `supabase/migrations/009_notifications.sql` to create the `notifications` table used by the admin notifications feature and the user notifications panel.
+
+3. Avatars and brand logos use existing buckets and tables.
 
 ## Vercel
 
-- No env or config changes needed for this release.
-- Redeploy as usual after pushing (or let CI deploy).
+- No new env vars. Ensure existing admin API routes can call `api/admin/notifications` (same auth as other admin routes).
+- Redeploy as usual after pushing.
 
-## Summary of changes
+## Summary of changes (latest)
 
-- **Avatar:** Header and Account Settings use the same source (DB profile). Avatar persists after refresh.
-- **Profile:** First name and last name fields; profile section updated.
-- **Notifications:** Bell icon in header (left of profile photo); right-side panel with notifications.
-- **Sidebar:** Toggle and logout moved to bottom-left; Help is icon-only. When sidebar is closed on desktop, a mini icon bar is shown; clicking an icon opens the full sidebar.
-- **Copy:** All user-facing Turkish strings switched to English (login, chat archive, settings, header, brands, etc.).
+- **Avatar:** Header and Account Settings share DB profile; avatar update propagates and persists. Image key forces refresh when URL changes.
+- **Profile:** First / last name; Notifications tab removed from Settings.
+- **Help & Support:** Moved to Account Settings as a tab; removed from sidebar footer.
+- **Notifications:** Narrower side panel (max 320px). Mock data removed; list comes from DB (admin-created notifications). Admin panel has a “Notifications” section to create notifications and choose target (all users or selected users).
+- **Header:** User email removed from top right.
+- **Sidebar:** Logout and sidebar toggle only in footer; Help removed.

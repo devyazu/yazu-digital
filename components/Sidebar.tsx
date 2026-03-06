@@ -180,9 +180,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
       <div className="border-t border-stone-100 pt-2 flex flex-col items-center gap-1">
-        <button onClick={() => { onNavigate('support'); onToggleDesktopSidebar?.(); }} className="p-2.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="Help & Support">
-          <LifeBuoy className="w-5 h-5" />
-        </button>
         {onLogout && (
           <button onClick={onLogout} className="p-2.5 rounded-lg hover:bg-red-50 text-stone-500 hover:text-red-600" title="Sign out">
             <LogOut className="w-4 h-4" />
@@ -360,7 +357,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {activeView !== 'sales-agent' && <span className="bg-brand-100 text-brand-700 text-[9px] px-1.5 py-0.5 rounded uppercase">New</span>}
          </button>
 
-         {/* Logout (left), Sidebar toggle, Help (icon only) */}
+         {/* Logout (left), Sidebar toggle — Help & Support moved to Account Settings */}
          <div className="flex items-center gap-1">
            {onLogout && (
              <button onClick={onLogout} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-all" title="Sign out">
@@ -372,9 +369,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                <PanelLeft className="w-4 h-4" />
              </button>
            )}
-           <button onClick={() => onNavigate('support')} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-stone-800 hover:bg-stone-50 rounded-lg text-sm font-medium transition-all" title="Help & Support">
-             <LifeBuoy className="w-4 h-4" />
-           </button>
          </div>
       </div>
     </aside>
