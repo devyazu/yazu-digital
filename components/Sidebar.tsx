@@ -117,13 +117,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
   const selectedCategoryRowRef = useRef<HTMLDivElement>(null);
 
-  // When sidebar opens (desktop) with a selected category (e.g. from mini bar click), expand it and scroll into view
+  // When sidebar opens (desktop) with a selected category (e.g. from mini bar click), expand it and scroll so that category title is visible at top
   useEffect(() => {
     if (!isDesktopOpen || !selectedCategory) return;
     setExpandedCats(prev => new Set([...prev, selectedCategory.id]));
     const t = setTimeout(() => {
-      selectedCategoryRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }, 100);
+      selectedCategoryRowRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, 350);
     return () => clearTimeout(t);
   }, [isDesktopOpen, selectedCategory?.id]);
 
