@@ -72,7 +72,16 @@ export default async function handler(req, res) {
           break;
         }
         const priceId = sub.items?.data?.[0]?.price?.id;
-        const tier = tierFromPriceId(priceId);
+        let tier = 'free';
+        if (priceId) {
+          const { data: dbProduct } = await supabase
+            .from('subscription_products')
+            .select('tier')
+            .eq('stripe_price_id', priceId)
+            .maybeSingle();
+          if (dbProduct?.tier) tier = dbProduct.tier;
+          else tier = tierFromPriceId(priceId);
+        }
         const defaults = TIER_DEFAULTS[tier] || TIER_DEFAULTS.free;
         const status = sub.status;
         const periodEnd = sub.current_period_end

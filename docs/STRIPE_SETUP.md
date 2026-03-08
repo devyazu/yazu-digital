@@ -4,9 +4,10 @@ Bu dokümanda Stripe ödeme ve abonelik akışının kurulumu, güvenlik ve Verc
 
 ## Özellikler
 
-- **Yeni abonelik:** Kullanıcı Pro veya Premium paketini Stripe Checkout ile aylık tekrarlayan ödeme (recurring) olarak satın alır.
+- **Ürün/fiyat yönetimi:** Ürünler ve fiyatlar **admin panelinden** (Abonelik sekmesi) oluşturulur; veritabanında `subscription_products` tablosunda tutulur ve kaydederken Stripe’da Product + Price otomatik oluşturulur. Stripe Dashboard’dan manuel ürün oluşturmak zorunlu değildir.
+- **Yeni abonelik:** Kullanıcı Pro veya Premium paketini Stripe Checkout ile aylık tekrarlayan ödeme (recurring) olarak satın alır. Fiyat, admin panelinde tanımlı ürüne göre belirlenir (yoksa env `STRIPE_PRICE_*` kullanılır).
 - **Yükseltme (upgrade):** Zaten abonesi olan kullanıcı üst pakete geçer; Stripe proration ile kalan dönem için fark hesaplanır, bir sonraki ay yeni paket fiyatı uygulanır.
-- **Webhook:** Stripe olayları (abonelik oluşturuldu/güncellendi/iptal) webhook ile alınır; `profiles` tablosu sadece **service role** ile güncellenir (istemci tier/credits değiştiremez).
+- **Webhook:** Stripe olayları (abonelik oluşturuldu/güncellendi/iptal) webhook ile alınır; `profiles` tablosu sadece **service role** ile güncellenir (istemci tier/credits değiştiremez). Tier eşlemesi önce `subscription_products` tablosundan `stripe_price_id` ile yapılır; bulunamazsa env’deki price ID’lere bakılır.
 
 ## 1. Ortam Değişkenleri
 
@@ -28,10 +29,8 @@ Not: Hiçbir Stripe veya Supabase **gizli** anahtar repoda veya client tarafınd
 
 ## 2. Stripe Dashboard
 
-1. **Ürünler ve fiyatlar**
-   - Products → Create product: örn. “Pro” ve “Premium”.
-   - Her ürün için **Recurring** (Monthly) bir Price oluştur.
-   - Her Price’ın ID’sini (`price_xxx`) kopyalayıp Vercel’de `STRIPE_PRICE_PRO` ve `STRIPE_PRICE_PREMIUM` olarak ayarlayın.
+1. **Ürünler ve fiyatlar (isteğe bağlı)**  
+   Ürünleri **admin panelinden** (Admin → Abonelik → Yeni ürün) oluşturabilirsiniz; kaydedildiğinde Stripe’da Product ve Price otomatik oluşturulur. İsterseniz Stripe Dashboard’dan da manuel ürün/fiyat oluşturup `STRIPE_PRICE_PRO` / `STRIPE_PRICE_PREMIUM` env’lerine yazabilirsiniz (admin panelinde ürün yoksa checkout bu env’leri kullanır).
 
 2. **Webhook**
    - Developers → Webhooks → Add endpoint.

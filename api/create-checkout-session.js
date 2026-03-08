@@ -7,7 +7,7 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import requireAuth from './lib/requireAuth.js';
-import { getPriceIdForTier, TIER_DEFAULTS, STRIPE_PRICE_IDS } from './lib/stripeConfig.js';
+import { getPriceIdForTier } from './lib/stripeConfig.js';
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -43,10 +43,20 @@ export default async function handler(req, res) {
   }
 
   const targetTier = body.targetTier === 'premium' ? 'premium' : body.targetTier === 'basic' ? 'basic' : 'pro';
-  const priceId = getPriceIdForTier(targetTier);
-  if (!priceId) return send(res, 400, { error: `Price not configured for tier: ${targetTier}. Set STRIPE_PRICE_${targetTier.toUpperCase()}.` });
-
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  let priceId = null;
+  const { data: dbProduct } = await supabase
+    .from('subscription_products')
+    .select('stripe_price_id')
+    .eq('tier', targetTier)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (dbProduct?.stripe_price_id) priceId = dbProduct.stripe_price_id;
+  if (!priceId) priceId = getPriceIdForTier(targetTier);
+  if (!priceId) return send(res, 400, { error: `Price not configured for tier: ${targetTier}. Add a product in Admin → Abonelik or set STRIPE_PRICE_${targetTier.toUpperCase()}.` });
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')

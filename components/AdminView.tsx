@@ -36,7 +36,7 @@ interface AdminViewProps {
 
 const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit }) => {
   const { session } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail' | 'notifications'>('tools');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail' | 'notifications' | 'billing'>('tools');
   const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS_LIST);
   // Email templates
   const [emailTemplates, setEmailTemplates] = useState<Array<{ id: string; slug: string; name: string; description: string | null; subject: string; body_html: string; body_json: string | null; from_name: string | null; recipient_type: string; is_active: boolean; updated_at: string }>>([]);
@@ -72,6 +72,18 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   // Tool Editor State
   const [isEditingTool, setIsEditingTool] = useState(false);
   const [editingTool, setEditingTool] = useState<Partial<Tool>>({});
+
+  // Abonelik ürünleri (Admin panelden yönetim; Stripe'a senkron)
+  type SubscriptionProductRow = { id: string; name: string; slug: string; tier: string; price_amount_cents: number; currency: string; stripe_product_id: string | null; stripe_price_id: string | null; is_active: boolean; sort_order: number; created_at: string; updated_at: string };
+  const [subscriptionProducts, setSubscriptionProducts] = useState<SubscriptionProductRow[]>([]);
+  const [subscriptionProductsLoading, setSubscriptionProductsLoading] = useState(false);
+  const [subscriptionProductsError, setSubscriptionProductsError] = useState<string | null>(null);
+  const [subscriptionProductForm, setSubscriptionProductForm] = useState<{ name: string; slug: string; tier: string; price_amount_cents: string; currency: string }>({ name: '', slug: '', tier: 'pro', price_amount_cents: '', currency: 'usd' });
+  const [subscriptionProductSaving, setSubscriptionProductSaving] = useState(false);
+  const [editingSubscriptionProduct, setEditingSubscriptionProduct] = useState<SubscriptionProductRow | null>(null);
+  const [editSubscriptionProductForm, setEditSubscriptionProductForm] = useState<{ name: string; price_amount_cents: string; currency: string; is_active: boolean }>({ name: '', price_amount_cents: '', currency: 'usd', is_active: true });
+  const [editSubscriptionProductSaving, setEditSubscriptionProductSaving] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(false);
   
   useEffect(() => {
     if ((activeTab !== 'users' && activeTab !== 'notifications') || !session?.access_token) return;
@@ -132,6 +144,21 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       })
       .catch(() => setNotificationsList([]))
       .finally(() => setNotificationsLoading(false));
+  }, [activeTab, session?.access_token]);
+
+  useEffect(() => {
+    if (activeTab !== 'billing' || !session?.access_token) return;
+    setSubscriptionProductsLoading(true);
+    setSubscriptionProductsError(null);
+    fetch('/api/admin/subscription-products', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
+        return data;
+      })
+      .then((data) => setSubscriptionProducts(data.products || []))
+      .catch((err) => setSubscriptionProductsError(err?.message || 'Ürünler yüklenemedi.'))
+      .finally(() => setSubscriptionProductsLoading(false));
   }, [activeTab, session?.access_token]);
 
   const handleCreateNotification = () => {
@@ -757,6 +784,186 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     </div>
   );
 
+  const renderBilling = () => {
+    const handleCreateProduct = () => {
+      const name = subscriptionProductForm.name.trim();
+      const slug = subscriptionProductForm.slug.trim() || name.toLowerCase().replace(/\s+/g, '-');
+      const tier = subscriptionProductForm.tier as 'basic' | 'pro' | 'premium';
+      const cents = Math.round(parseFloat(subscriptionProductForm.price_amount_cents || '0') * 100) || 0;
+      if (!name || !tier || cents <= 0) {
+        setSubscriptionProductsError('Ad, tier ve fiyat (örn. 19.99) gerekli.');
+        return;
+      }
+      setSubscriptionProductSaving(true);
+      setSubscriptionProductsError(null);
+      fetch('/api/admin/subscription-products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ name, slug, tier, price_amount_cents: cents, currency: subscriptionProductForm.currency || 'usd' }),
+      })
+        .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
+          return data;
+        })
+        .then((data) => {
+          setSubscriptionProducts((prev) => [...prev, data.product]);
+          setShowAddProduct(false);
+          setSubscriptionProductForm({ name: '', slug: '', tier: 'pro', price_amount_cents: '', currency: 'usd' });
+        })
+        .catch((e) => setSubscriptionProductsError(e?.message || 'Ürün eklenemedi.'))
+        .finally(() => setSubscriptionProductSaving(false));
+    };
+
+    const handleUpdateProduct = () => {
+      if (!editingSubscriptionProduct || !session?.access_token) return;
+      const name = editSubscriptionProductForm.name.trim();
+      const cents = editSubscriptionProductForm.price_amount_cents !== '' ? Math.round(parseFloat(editSubscriptionProductForm.price_amount_cents) * 100) : undefined;
+      if (!name && cents === undefined && editSubscriptionProductForm.currency === editingSubscriptionProduct.currency) {
+        setEditingSubscriptionProduct(null);
+        return;
+      }
+      setEditSubscriptionProductSaving(true);
+      setSubscriptionProductsError(null);
+      const body = { id: editingSubscriptionProduct.id, name: name || undefined, price_amount_cents: cents, currency: editSubscriptionProductForm.currency || undefined, is_active: editSubscriptionProductForm.is_active };
+      fetch('/api/admin/subscription-products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(body),
+      })
+        .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
+          return data;
+        })
+        .then((data) => {
+          setSubscriptionProducts((prev) => prev.map((p) => (p.id === data.product.id ? data.product : p)));
+          setEditingSubscriptionProduct(null);
+        })
+        .catch((e) => setSubscriptionProductsError(e?.message || 'Güncellenemedi.'))
+        .finally(() => setEditSubscriptionProductSaving(false));
+    };
+
+    return (
+      <div className="space-y-6 animate-in fade-in">
+        <div className="flex items-center justify-between">
+          <p className="text-stone-600 text-sm">Ürünler veritabanında tutulur; kaydederken Stripe’da Product ve Price otomatik oluşturulur. Checkout bu fiyatları kullanır.</p>
+          <button
+            type="button"
+            onClick={() => { setShowAddProduct(true); setSubscriptionProductsError(null); }}
+            className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700"
+          >
+            <Plus className="w-4 h-4" /> Yeni ürün
+          </button>
+        </div>
+        {subscriptionProductsError && <p className="text-red-600 text-sm bg-red-50 p-2 rounded">{subscriptionProductsError}</p>}
+        {showAddProduct && (
+          <div className="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+            <h3 className="font-bold text-stone-800 mb-4">Yeni abonelik ürünü</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Ad</label>
+                <input value={subscriptionProductForm.name} onChange={(e) => setSubscriptionProductForm((f) => ({ ...f, name: e.target.value }))} placeholder="Pro" className="w-full px-3 py-2 border border-stone-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Slug (benzersiz)</label>
+                <input value={subscriptionProductForm.slug} onChange={(e) => setSubscriptionProductForm((f) => ({ ...f, slug: e.target.value }))} placeholder="pro" className="w-full px-3 py-2 border border-stone-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Tier</label>
+                <select value={subscriptionProductForm.tier} onChange={(e) => setSubscriptionProductForm((f) => ({ ...f, tier: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg">
+                  <option value="basic">basic</option>
+                  <option value="pro">pro</option>
+                  <option value="premium">premium</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Aylık fiyat (örn. 19.99)</label>
+                <input type="number" step="0.01" min="0" value={subscriptionProductForm.price_amount_cents} onChange={(e) => setSubscriptionProductForm((f) => ({ ...f, price_amount_cents: e.target.value }))} placeholder="19.99" className="w-full px-3 py-2 border border-stone-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Para birimi</label>
+                <input value={subscriptionProductForm.currency} onChange={(e) => setSubscriptionProductForm((f) => ({ ...f, currency: e.target.value }))} placeholder="usd" className="w-full px-3 py-2 border border-stone-200 rounded-lg" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={handleCreateProduct} disabled={subscriptionProductSaving} className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2">
+                {subscriptionProductSaving && <Loader2 className="w-4 h-4 animate-spin" />} Oluştur
+              </button>
+              <button type="button" onClick={() => { setShowAddProduct(false); setSubscriptionProductForm({ name: '', slug: '', tier: 'pro', price_amount_cents: '', currency: 'usd' }); }} className="px-4 py-2 border border-stone-200 rounded-lg text-stone-600">İptal</button>
+            </div>
+          </div>
+        )}
+        {editingSubscriptionProduct && (
+          <div className="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+            <h3 className="font-bold text-stone-800 mb-4">Ürünü düzenle: {editingSubscriptionProduct.name}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Ad</label>
+                <input value={editSubscriptionProductForm.name} onChange={(e) => setEditSubscriptionProductForm((f) => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Yeni aylık fiyat (örn. 24.99)</label>
+                <input type="number" step="0.01" min="0" value={editSubscriptionProductForm.price_amount_cents} onChange={(e) => setEditSubscriptionProductForm((f) => ({ ...f, price_amount_cents: e.target.value }))} placeholder={String(editingSubscriptionProduct.price_amount_cents / 100)} className="w-full px-3 py-2 border border-stone-200 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Para birimi</label>
+                <input value={editSubscriptionProductForm.currency} onChange={(e) => setEditSubscriptionProductForm((f) => ({ ...f, currency: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg" />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="billing-active" checked={editSubscriptionProductForm.is_active} onChange={(e) => setEditSubscriptionProductForm((f) => ({ ...f, is_active: e.target.checked }))} />
+                <label htmlFor="billing-active" className="text-sm text-stone-700">Aktif (listede kullanılsın)</label>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={handleUpdateProduct} disabled={editSubscriptionProductSaving} className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2">
+                {editSubscriptionProductSaving && <Loader2 className="w-4 h-4 animate-spin" />} Kaydet
+              </button>
+              <button type="button" onClick={() => setEditingSubscriptionProduct(null)} className="px-4 py-2 border border-stone-200 rounded-lg text-stone-600">İptal</button>
+            </div>
+          </div>
+        )}
+        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+          <h3 className="font-bold text-stone-800 p-4 border-b border-stone-100">Abonelik ürünleri</h3>
+          {subscriptionProductsLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 text-brand-500 animate-spin" /></div>
+          ) : subscriptionProducts.length === 0 ? (
+            <p className="p-6 text-stone-500 text-sm text-center">Henüz ürün yok. &quot;Yeni ürün&quot; ile ekleyin; Stripe’da otomatik oluşturulur.</p>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-stone-200 bg-stone-50">
+                  <th className="px-4 py-3 font-bold text-stone-600">Ad</th>
+                  <th className="px-4 py-3 font-bold text-stone-600">Slug / Tier</th>
+                  <th className="px-4 py-3 font-bold text-stone-600">Fiyat</th>
+                  <th className="px-4 py-3 font-bold text-stone-600">Stripe Price ID</th>
+                  <th className="px-4 py-3 font-bold text-stone-600">Durum</th>
+                  <th className="px-4 py-3 font-bold text-stone-600"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {subscriptionProducts.map((p) => (
+                  <tr key={p.id} className="border-b border-stone-100">
+                    <td className="px-4 py-3 font-medium text-stone-800">{p.name}</td>
+                    <td className="px-4 py-3 text-stone-600">{p.slug} / {p.tier}</td>
+                    <td className="px-4 py-3">{(p.price_amount_cents / 100).toFixed(2)} {p.currency}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-stone-500">{p.stripe_price_id || '—'}</td>
+                    <td className="px-4 py-3">{p.is_active ? <span className="text-green-600">Aktif</span> : <span className="text-stone-400">Pasif</span>}</td>
+                    <td className="px-4 py-3">
+                      <button type="button" onClick={() => { setEditingSubscriptionProduct(p); setEditSubscriptionProductForm({ name: p.name, price_amount_cents: String(p.price_amount_cents / 100), currency: p.currency, is_active: p.is_active }); }} className="text-brand-600 hover:underline flex items-center gap-1">
+                        <Pencil className="w-3 h-3" /> Düzenle
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // --- TOOL MANAGEMENT VIEW ---
   const renderTools = () => {
     if (isEditingTool) {
@@ -1230,6 +1437,12 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
               >
                 <Bell className="w-4 h-4" /> Notifications
               </button>
+              <button
+                onClick={() => setActiveTab('billing')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'billing' ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100'}`}
+              >
+                <DollarSign className="w-4 h-4" /> Abonelik
+              </button>
             </nav>
             <div className="mt-auto p-6 border-t border-stone-200">
                <div className="text-xs text-stone-400 font-mono">v2.5.0 (Build 9001)</div>
@@ -1239,13 +1452,14 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
 
          {/* Content */}
          <div className="flex-1 overflow-y-auto p-8">
-            <h1 className="text-2xl font-bold text-stone-800 mb-6 capitalize">{activeTab} Overview</h1>
+            <h1 className="text-2xl font-bold text-stone-800 mb-6 capitalize">{activeTab === 'billing' ? 'Abonelik' : activeTab} Overview</h1>
             {activeTab === 'analytics' && renderDeepAnalytics()}
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'tools' && renderTools()}
             {activeTab === 'categories' && renderCategories()}
             {activeTab === 'mail' && renderMail()}
             {activeTab === 'notifications' && renderNotifications()}
+            {activeTab === 'billing' && renderBilling()}
          </div>
       </div>
     </div>
