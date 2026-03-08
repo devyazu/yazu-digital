@@ -143,14 +143,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     <aside className={sidebarClasses}>
       
       {/* 1. History & Favorites Header */}
-      <div className="px-4 py-6 space-y-4 border-b border-stone-100 min-w-[288px] lg:min-w-0">
+      <div className="px-4 py-4 space-y-3 border-b border-stone-100 min-w-[288px] lg:min-w-0">
         
         {/* History Button */}
         <button 
           onClick={() => onNavigate('history')}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeView === 'history' ? 'bg-stone-800 text-white shadow-lg' : 'bg-white border border-stone-200 text-stone-600 hover:border-brand-300 hover:text-brand-600'}`}
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold leading-tight transition-all ${activeView === 'history' ? 'bg-stone-800 text-white shadow-lg' : 'bg-white border border-stone-200 text-stone-600 hover:border-brand-300 hover:text-brand-600'}`}
         >
-          <History className="w-4 h-4" />
+          <History className="w-3.5 h-3.5" />
           <span>Chat Archive</span>
         </button>
 
@@ -188,11 +188,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           };
           return (
             <div className="animate-in fade-in slide-in-from-top-2">
-              <h2 className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2 mb-2 px-2">
-                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+              <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5 px-2 leading-tight">
+                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                 Favorites
               </h2>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {favTools.map((tool) => (
                   <div
                     key={`fav-${tool.id}`}
@@ -216,14 +216,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectTool(tool)}
-                      className={`flex-1 min-w-0 text-left flex items-center gap-2 px-2 py-1.5 text-[13px] rounded-lg transition-all ${selectedTool?.id === tool.id ? 'bg-brand-50 text-brand-700 font-medium' : 'text-stone-600 hover:bg-stone-50'}`}
+                      className={`flex-1 min-w-0 text-left flex items-center gap-1.5 px-2 py-1 text-[11px] leading-snug rounded-lg transition-all ${selectedTool?.id === tool.id ? 'bg-brand-50 text-brand-700 font-medium' : 'text-stone-600 hover:bg-stone-50'}`}
                     >
                       <span className="truncate">{tool.name}</span>
                     </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onToggleFavorite(tool.id); }}
-                      className="shrink-0 p-1 hover:bg-stone-200 rounded-full cursor-pointer"
+                      className="shrink-0 p-0.5 hover:bg-stone-200 rounded-full cursor-pointer"
                       title="Remove from favorites"
                       aria-label="Remove from favorites"
                     >
@@ -238,9 +238,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       {/* 2. Tool Categories */}
-      <div className="flex-1 overflow-y-auto pb-4 space-y-1 pt-4 min-w-[288px] lg:min-w-0">
-        <div className="px-6 mb-2">
-           <h2 className="text-xs font-bold text-stone-400 uppercase tracking-wider">Platform Tools</h2>
+      <div className="flex-1 overflow-y-auto pb-3 space-y-0.5 pt-3 min-w-[288px] lg:min-w-0">
+        <div className="px-4 mb-1.5">
+           <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-wider leading-tight">Platform Tools</h2>
         </div>
 
         {categories.map((category) => {
@@ -251,30 +251,30 @@ const Sidebar: React.FC<SidebarProps> = ({
           const hasMore = category.tools.length > currentLimit;
           
           return (
-            <div key={category.id} ref={selectedCategory?.id === category.id ? selectedCategoryRowRef : undefined} className="px-3">
+            <div key={category.id} ref={selectedCategory?.id === category.id ? selectedCategoryRowRef : undefined} className="px-2">
               <div 
                 className={`
-                  w-full flex items-center justify-between p-2 rounded-xl transition-all duration-200 cursor-pointer
+                  w-full flex items-center justify-between p-1.5 rounded-lg transition-all duration-200 cursor-pointer
                   ${isActiveCategory ? 'bg-white shadow-sm ring-1 ring-stone-100' : 'hover:bg-white/50 hover:shadow-sm'}
                 `}
                 onClick={(e) => handleCategoryClick(e, category)}
               >
                 {/* Clickable Area for Navigation */}
-                <div className="flex items-center gap-3 flex-1 text-left">
-                  <div className={`p-1.5 rounded-lg ${isActiveCategory ? 'bg-brand-50 text-brand-600' : 'bg-stone-100 text-stone-500'}`}>
-                    {getIcon(category.iconName)}
+                <div className="flex items-center gap-2 flex-1 text-left min-w-0">
+                  <div className={`p-1 rounded-lg shrink-0 ${isActiveCategory ? 'bg-brand-50 text-brand-600' : 'bg-stone-100 text-stone-500'}`}>
+                    {getIcon(category.iconName, 'w-3.5 h-3.5')}
                   </div>
-                  <span className={`text-sm font-semibold ${isActiveCategory ? 'text-stone-800' : 'text-stone-600'}`}>
+                  <span className={`text-xs font-semibold leading-tight truncate ${isActiveCategory ? 'text-stone-800' : 'text-stone-600'}`}>
                     {category.name}
                   </span>
                 </div>
 
                 {/* Toggle Icon - SEPARATE BUTTON */}
                 <div 
-                    className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded-md transition-colors"
+                    className="p-1 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded-md transition-colors shrink-0"
                     onClick={(e) => handleToggleClick(e, category.id)}
                 >
-                  {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 </div>
               </div>
 
@@ -282,10 +282,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div 
                 className={`
                   overflow-hidden transition-all duration-300 ease-in-out
-                  ${isExpanded ? 'max-h-[800px] opacity-100 mt-1' : 'max-h-0 opacity-0'}
+                  ${isExpanded ? 'max-h-[800px] opacity-100 mt-0.5' : 'max-h-0 opacity-0'}
                 `}
               >
-                <div className="pl-3 relative ml-4 border-l border-stone-200/60 space-y-0.5 py-1">
+                <div className="pl-2 relative ml-3 border-l border-stone-200/60 space-y-0 py-0.5">
                   {displayTools.map((tool) => {
                     const isFav = favorites.includes(tool.id);
                     return (
@@ -299,21 +299,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                       >
                         <button
                           onClick={() => onSelectTool(tool)}
-                          className={`flex-1 min-w-0 text-left flex items-center gap-2 pl-4 py-2 text-[13px] ${
+                          className={`flex-1 min-w-0 text-left flex items-center gap-1.5 pl-3 py-1.5 text-[11px] leading-snug ${
                             selectedTool?.id === tool.id
                               ? 'text-brand-700 font-medium'
                               : 'text-stone-500 group-hover:text-stone-800'
                           }`}
                         >
-                          <div className="shrink-0 opacity-70">{getIcon(tool.iconName, "w-3 h-3")}</div>
+                          <div className="shrink-0 opacity-70">{getIcon(tool.iconName, "w-2.5 h-2.5")}</div>
                           <span className="truncate min-w-0">{tool.name}</span>
                           {/* Access Level Badge - always visible */}
                           {tool.accessLevel !== 'basic' && (
                              <span className="shrink-0" title={tool.accessLevel === 'premium' ? 'Premium Tool' : 'Pro Tool'}>
                                {tool.accessLevel === 'premium' ? (
-                                 <Gem size={12} className="text-purple-600 fill-purple-100" />
+                                 <Gem size={10} className="text-purple-600 fill-purple-100" />
                                ) : (
-                                 <Crown size={12} className="text-brand-600 fill-brand-100" />
+                                 <Crown size={10} className="text-brand-600 fill-brand-100" />
                                )}
                              </span>
                           )}
@@ -324,11 +324,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                             e.stopPropagation();
                             onToggleFavorite(tool.id);
                           }}
-                          className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-full transition-all text-[12px] ${isFav ? 'opacity-100 text-yellow-500' : 'opacity-0 group-hover:opacity-100 text-stone-300 hover:text-yellow-500'}`}
+                          className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-full transition-all ${isFav ? 'opacity-100 text-yellow-500' : 'opacity-0 group-hover:opacity-100 text-stone-300 hover:text-yellow-500'}`}
                           title={isFav ? 'Remove from favorites' : 'Add to favorites'}
                           aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
                         </button>
                       </div>
                     );
@@ -338,9 +338,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {hasMore && (
                     <button 
                       onClick={(e) => handleLoadMore(e, category.id)}
-                      className="w-full text-left flex items-center gap-1 pl-4 py-2 text-[11px] font-medium text-brand-600 hover:underline hover:text-brand-700 transition-colors"
+                      className="w-full text-left flex items-center gap-1 pl-3 py-1.5 text-[10px] font-medium leading-tight text-brand-600 hover:underline hover:text-brand-700 transition-colors"
                     >
-                      <Plus className="w-3 h-3" /> Load more
+                      <Plus className="w-2.5 h-2.5" /> Load more
                     </button>
                   )}
                 </div>
@@ -351,29 +351,29 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer: Logout, Toggle, Help (icon only) */}
-      <div className="p-4 border-t border-stone-200 space-y-2 min-w-[288px] lg:min-w-0">
+      <div className="p-3 border-t border-stone-200 space-y-1.5 min-w-[288px] lg:min-w-0">
          {/* Sales Agent Button */}
          <button 
           onClick={() => onNavigate('sales-agent')}
-          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-bold transition-all border mb-2 ${activeView === 'sales-agent' ? 'bg-gradient-to-r from-brand-600 to-orange-500 text-white border-transparent shadow-lg' : 'bg-white border-brand-200 text-brand-700 hover:bg-brand-50'}`}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-bold leading-tight transition-all border mb-1.5 ${activeView === 'sales-agent' ? 'bg-gradient-to-r from-brand-600 to-orange-500 text-white border-transparent shadow-lg' : 'bg-white border-brand-200 text-brand-700 hover:bg-brand-50'}`}
          >
-          <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5" />
+          <div className="flex items-center gap-1.5">
+              <Bot className="w-4 h-4" />
               <span>AI Sales Agent</span>
           </div>
-          {activeView !== 'sales-agent' && <span className="bg-brand-100 text-brand-700 text-[9px] px-1.5 py-0.5 rounded uppercase">New</span>}
+          {activeView !== 'sales-agent' && <span className="bg-brand-100 text-brand-700 text-[8px] px-1 py-0.5 rounded uppercase leading-none">New</span>}
          </button>
 
          {/* Logout (left), Sidebar toggle — Help & Support moved to Account Settings */}
-         <div className="flex items-center gap-1">
+         <div className="flex items-center gap-0.5">
            {onLogout && (
-             <button onClick={onLogout} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-all" title="Sign out" aria-label="Sign out">
-               <LogOut className="w-4 h-4" />
+             <button onClick={onLogout} className="flex items-center justify-center gap-1 flex-1 py-2 text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium leading-tight transition-all" title="Sign out" aria-label="Sign out">
+               <LogOut className="w-3.5 h-3.5" />
              </button>
            )}
            {onToggleDesktopSidebar && (
-             <button onClick={onToggleDesktopSidebar} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-stone-800 hover:bg-stone-50 rounded-lg text-sm font-medium transition-all" title="Close sidebar" aria-label="Close sidebar">
-               <PanelLeft className="w-4 h-4" />
+             <button onClick={onToggleDesktopSidebar} className="flex items-center justify-center gap-1 flex-1 py-2 text-stone-500 hover:text-stone-800 hover:bg-stone-50 rounded-lg text-xs font-medium leading-tight transition-all" title="Close sidebar" aria-label="Close sidebar">
+               <PanelLeft className="w-3.5 h-3.5" />
              </button>
            )}
          </div>
