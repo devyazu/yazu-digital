@@ -42,6 +42,7 @@ export default async function handler(req, res) {
   if (body.first_name !== undefined) profileUpdates.first_name = body.first_name;
   if (body.last_name !== undefined) profileUpdates.last_name = body.last_name;
   if (body.company_name !== undefined) profileUpdates.company_name = body.company_name;
+  if (body.job_title !== undefined) profileUpdates.job_title = body.job_title ? String(body.job_title).trim() : null;
   if (body.first_name !== undefined || body.last_name !== undefined) {
     const { data: existing } = await supabaseAdmin.from('profiles').select('first_name, last_name').eq('id', userId).single();
     const first = body.first_name !== undefined ? String(body.first_name).trim() || null : (existing?.first_name ?? null);

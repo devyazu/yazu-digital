@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, AccessLevel } from '../types';
-import { User, CreditCard, Shield, Check, Zap, Plus, MapPin, Building, Loader2, LifeBuoy } from 'lucide-react';
+import { User, CreditCard, Shield, Check, Zap, Plus, MapPin, Building, Loader2, LifeBuoy, Pencil } from 'lucide-react';
 import SupportView from './SupportView';
 import { getProfile, updateProfile, uploadAvatar, type Profile } from '../services/profileService';
 
@@ -26,6 +26,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: pr
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  type EditableField = 'first_name' | 'last_name' | 'company_name' | 'job_title';
+  const [editingField, setEditingField] = useState<EditableField | null>(null);
 
   const profileSource = profileProp ?? profile;
   const setProfile = (p: Profile | null | ((prev: Profile | null) => Profile | null)) => {
@@ -140,6 +142,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: pr
     }
   };
 
+  const saveFieldAndClose = async () => {
+    await handleSaveProfile();
+    setEditingField(null);
+  };
+
   const renderProfile = () => {
     if (profileLoading) {
       return (
@@ -148,6 +155,60 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: pr
         </div>
       );
     }
+    const fieldRow = (
+      label: string,
+      field: EditableField | 'email',
+      value: string,
+      readOnly = false
+    ) => {
+      const isEditing = !readOnly && editingField === field;
+      return (
+        <div key={field} className="flex items-center justify-between gap-4 py-3 border-b border-stone-100 last:border-0">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-medium text-stone-500 uppercase tracking-wide">{label}</div>
+            {isEditing ? (
+              <input
+                type="text"
+                value={field === 'first_name' ? firstName : field === 'last_name' ? lastName : field === 'company_name' ? companyName : jobTitle}
+                onChange={(e) => {
+                  if (field === 'first_name') setFirstName(e.target.value);
+                  else if (field === 'last_name') setLastName(e.target.value);
+                  else if (field === 'company_name') setCompanyName(e.target.value);
+                  else setJobTitle(e.target.value);
+                }}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-stone-200 text-stone-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                placeholder={label}
+                autoFocus
+              />
+            ) : (
+              <div className="text-stone-800 text-sm mt-0.5 min-h-[28px]">{value || '—'}</div>
+            )}
+          </div>
+          {readOnly ? null : (
+            isEditing ? (
+              <button
+                type="button"
+                onClick={saveFieldAndClose}
+                disabled={saving}
+                className="shrink-0 px-3 py-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingField(field as EditableField)}
+                className="shrink-0 p-2 rounded-lg text-stone-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                title="Edit"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )
+          )}
+        </div>
+      );
+    };
+
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
         {message && (
@@ -156,7 +217,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: pr
           </div>
         )}
         <div className="flex items-center gap-6">
-          <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white shadow-lg bg-stone-200">
+          <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-stone-200 bg-stone-200 shrink-0">
             <img
               src={profileSource?.avatar_url || DEFAULT_AVATAR}
               alt="Avatar"
@@ -164,41 +225,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({ authUser, user, profile: pr
             />
           </div>
           <div>
-            <label className="inline-block px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 text-stone-700 shadow-sm transition-all cursor-pointer">
-              {avatarUploading ? 'Uploading...' : 'Change Avatar'}
+            <label className="inline-block px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 text-stone-700 cursor-pointer transition-colors">
+              {avatarUploading ? 'Uploading...' : 'Change avatar'}
               <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleAvatarChange} disabled={avatarUploading} />
             </label>
-            <p className="text-xs text-stone-400 mt-2">JPG, PNG, GIF or WebP. Max 1MB.</p>
+            <p className="text-xs text-stone-400 mt-1.5">JPG, PNG, GIF or WebP. Max 1MB.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">First Name</label>
-            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="First name" />
+        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="px-4 py-3 bg-stone-50 border-b border-stone-200">
+            <h3 className="text-sm font-bold text-stone-800">Profile details</h3>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Last Name</label>
-            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Last name" />
+          <div className="divide-y divide-stone-100 px-4">
+            {fieldRow('First name', 'first_name', firstName)}
+            {fieldRow('Last name', 'last_name', lastName)}
+            {fieldRow('Email address', 'email', authUser.email ?? '', true)}
+            {fieldRow('Company name', 'company_name', companyName)}
+            {fieldRow('Job title', 'job_title', jobTitle)}
           </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-stone-700 mb-1">Email Address</label>
-            <input type="email" value={authUser.email ?? ''} readOnly className="w-full px-4 py-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Company Name</label>
-            <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Company name" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Job Title</label>
-            <input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full px-4 py-2 rounded-lg border border-stone-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" placeholder="Job title" />
-          </div>
-        </div>
-
-        <div className="pt-6 border-t border-stone-200 flex justify-end">
-          <button onClick={handleSaveProfile} disabled={saving} className="px-6 py-2 bg-brand-600 text-white font-medium rounded-lg hover:bg-brand-700 transition-colors shadow-sm disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
         </div>
       </div>
     );

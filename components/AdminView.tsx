@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Category, Tool, UserProfile, AdminStats } from '../types';
 import { 
   LayoutDashboard, Users, Wrench, FolderOpen, Mail, Bell,
-  Search, Plus, Edit, Trash2, CheckCircle, XCircle, 
+  Search, Plus, Edit, Trash2, CheckCircle, XCircle, Pencil,
   BarChart3, DollarSign, Zap, Play, Settings, TrendingUp,
   Activity, ArrowUpRight, Globe, Loader2
 } from 'lucide-react';
@@ -268,6 +268,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       first_name: u.first_name ?? '',
       last_name: u.last_name ?? '',
       company_name: u.company_name ?? '',
+      job_title: u.job_title ?? '',
       tier: u.tier ?? 'free',
       credits_total: u.credits_total ?? 0,
       credits_used: u.credits_used ?? 0,
@@ -291,6 +292,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
           first_name: editUserForm.first_name || null,
           last_name: editUserForm.last_name || null,
           company_name: editUserForm.company_name || null,
+          job_title: editUserForm.job_title?.trim() || null,
           tier: editUserForm.tier || 'free',
           credits_total: Number(editUserForm.credits_total) ?? 0,
           credits_used: Number(editUserForm.credits_used) ?? 0,
@@ -299,7 +301,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
         }),
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data?.error || `Hata ${r.status}`);
+      if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
       setRealUsers((prev) =>
         prev.map((x) =>
           x.id === editingUser.id
@@ -309,6 +311,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                 first_name: editUserForm.first_name ?? x.first_name,
                 last_name: editUserForm.last_name ?? x.last_name,
                 company_name: editUserForm.company_name ?? x.company_name,
+                job_title: editUserForm.job_title?.trim() ?? x.job_title,
                 tier: editUserForm.tier ?? x.tier,
                 credits_total: Number(editUserForm.credits_total) ?? x.credits_total,
                 credits_used: Number(editUserForm.credits_used) ?? x.credits_used,
@@ -513,58 +516,54 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
           <p className="text-sm text-stone-500">Ensure SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are set in Vercel environment variables.</p>
         </div>
       ) : (
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-xs">
           <thead className="bg-stone-100 text-stone-500 font-medium">
             <tr>
-              <th className="px-6 py-3">User</th>
-              <th className="px-6 py-3">Email</th>
-              <th className="px-6 py-3">Company</th>
-              <th className="px-6 py-3">Tier</th>
-              <th className="px-6 py-3">Credits</th>
-              <th className="px-6 py-3">Max brands</th>
-              <th className="px-6 py-3">Joined</th>
-              <th className="px-6 py-3">Role</th>
-              <th className="px-6 py-3">Action</th>
+              <th className="px-3 py-2">User</th>
+              <th className="px-3 py-2">Email</th>
+              <th className="px-3 py-2">Company</th>
+              <th className="px-3 py-2">Tier</th>
+              <th className="px-3 py-2">Credits</th>
+              <th className="px-3 py-2">Max</th>
+              <th className="px-3 py-2">Joined</th>
+              <th className="px-3 py-2">Role</th>
+              <th className="px-3 py-2 w-10 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {filteredRealUsers.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-8 text-center text-stone-400">
+                <td colSpan={9} className="px-3 py-6 text-center text-stone-400">
                   {realUsers.length === 0 && !usersLoading ? 'No users yet.' : 'No matching users.'}
                 </td>
               </tr>
             ) : (
               filteredRealUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-stone-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-stone-200 shrink-0">
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-stone-200 shrink-0">
                         <img
                           src={user.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'}
                           alt=""
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div>
-                        <div className="font-medium text-stone-800">{user.full_name || '—'}</div>
-                        <div className="text-xs text-stone-400 font-mono">{user.id.slice(0, 8)}…</div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-stone-800 truncate">{user.full_name || [user.first_name, user.last_name].filter(Boolean).join(' ') || '—'}</div>
+                        <div className="text-[10px] text-stone-400 font-mono truncate">{user.id.slice(0, 8)}…</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-stone-700">{user.email}</div>
+                  <td className="px-3 py-2 text-stone-600 truncate max-w-[140px]" title={user.email}>{user.email}</td>
+                  <td className="px-3 py-2 text-stone-600 truncate max-w-[100px]">{user.company_name || '—'}</td>
+                  <td className="px-3 py-2">
+                    <span className="font-semibold px-1.5 py-0.5 rounded bg-stone-100 text-stone-700 capitalize">{user.tier ?? 'free'}</span>
                   </td>
-                  <td className="px-6 py-4 text-stone-600">{user.company_name || '—'}</td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-bold px-2 py-1 rounded bg-stone-100 text-stone-700 capitalize">{user.tier ?? 'free'}</span>
-                  </td>
-                  <td className="px-6 py-4 text-stone-600">
-                    {(user.credits_total ?? 0) - (user.credits_used ?? 0)} / {user.credits_total ?? 0}
-                  </td>
-                  <td className="px-6 py-4 text-stone-600">{user.max_brands ?? 1}</td>
-                  <td className="px-6 py-4 text-stone-600">
-                    {user.created_at ? new Date(user.created_at).toLocaleDateString('tr-TR', {
+                  <td className="px-3 py-2 text-stone-600 tabular-nums">{(user.credits_used ?? 0)} / {user.credits_total ?? 0}</td>
+                  <td className="px-3 py-2 text-stone-600">{user.max_brands ?? 1}</td>
+                  <td className="px-3 py-2 text-stone-600 whitespace-nowrap">
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString('en-GB', {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric',
@@ -572,18 +571,19 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                       minute: '2-digit',
                     }) : '—'}
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${user.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-stone-100 text-stone-600'}`}>
+                  <td className="px-3 py-2">
+                    <span className={`font-semibold px-1.5 py-0.5 rounded ${user.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-stone-100 text-stone-600'}`}>
                       {user.is_admin ? 'Admin' : 'User'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2 text-center">
                     <button
                       type="button"
                       onClick={() => openEditUser(user)}
-                      className="text-brand-600 hover:text-brand-700 font-medium text-sm"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                      title="Edit user"
                     >
-                      Edit
+                      <Pencil className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -615,6 +615,10 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Company</label>
                 <input value={editUserForm.company_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, company_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Job title</label>
+                <input value={editUserForm.job_title ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, job_title: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" placeholder="Job title" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Tier</label>
