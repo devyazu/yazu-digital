@@ -11,6 +11,9 @@ interface EmailConfirmGateProps {
 }
 
 export default function EmailConfirmGate({ userId, onSignOut, children }: EmailConfirmGateProps) {
+  // #region agent log
+  fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'EmailConfirmGate.tsx:render',message:'EmailConfirmGate render',data:{userId},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resendLoading, setResendLoading] = useState(false);

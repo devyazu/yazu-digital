@@ -96,12 +96,12 @@ interface SidebarProps {
   onLogout?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  categories, 
-  selectedTool, 
+const Sidebar: React.FC<SidebarProps> = ({
+  categories,
+  selectedTool,
   selectedCategory,
-  onSelectTool, 
-  onSelectCategory, 
+  onSelectTool,
+  onSelectCategory,
   onNavigate,
   activeView,
   isOpen,
@@ -113,6 +113,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   user,
   onLogout,
 }) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'Sidebar.tsx:render',message:'Sidebar render',data:{favoritesLen:favorites?.length??0},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   // Default expanded categories
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(['cat-visual', 'cat-ugc', 'cat-copy']));
   // Pagination state

@@ -25,6 +25,9 @@ const AVATAR_BUCKET = 'avatars';
 const AVATAR_MAX_SIZE = 1024 * 1024; // 1MB
 
 export async function getProfile(userId: string): Promise<{ profile: Profile | null; error: Error | null }> {
+  // #region agent log
+  fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'profileService.ts:getProfile',message:'getProfile called',data:{userId,hasSupabase:!!supabase},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   try {
     if (!supabase) return { profile: null, error: new Error('Supabase not configured') };
     const { data, error } = await supabase
@@ -49,6 +52,9 @@ export async function getProfile(userId: string): Promise<{ profile: Profile | n
 
 /** Load only favorite_tool_ids. Returns [] on error or if column does not exist (run migration 013). */
 export async function getFavoriteToolIds(userId: string): Promise<string[]> {
+  // #region agent log
+  fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'profileService.ts:getFavoriteToolIds',message:'getFavoriteToolIds called',data:{userId,hasSupabase:!!supabase},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   try {
     if (!supabase) return [];
     const { data, error } = await supabase

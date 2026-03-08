@@ -39,7 +39,9 @@ function filterCategoriesBySearch(categories: Category[], query: string): Catego
 
 function AppContent() {
   const { user: authUser, loading: authLoading, signIn, signUp, signOut, isConfigured } = useAuth();
-
+  // #region agent log
+  fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'App.tsx:AppContent',message:'AppContent render',data:{authLoading,hasAuthUser:!!authUser},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#F2F2F0] flex items-center justify-center">
@@ -60,6 +62,9 @@ function AppContent() {
 }
 
 function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: string }; onLogout: () => void }) {
+  // #region agent log
+  fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'App.tsx:MainApp',message:'MainApp render start',data:{userId:authUser?.id},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   // Global Data State
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
 
@@ -265,6 +270,9 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     [categories, searchQuery]
   );
 
+  // #region agent log
+  fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'App.tsx:MainAppReturn',message:'MainApp about to return EmailConfirmGate',data:{},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
   return (
     <EmailConfirmGate userId={authUser.id} onSignOut={onLogout}>
     <div className="min-h-screen bg-[#F2F2F0] flex flex-col font-sans text-stone-800 relative selection:bg-brand-200 selection:text-brand-900">
