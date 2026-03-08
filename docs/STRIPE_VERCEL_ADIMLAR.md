@@ -82,3 +82,16 @@ Bu kadar. Ürün/fiyatı admin panelinden ekleyeceğiniz için Stripe’da ayrı
 4. **Test:** Uygulama tarafında bir paket seçip “Upgrade” deneyin; Stripe Checkout’a gidip test kartı ile ödeme deneyebilirsiniz.
 
 Bu adımlar tamamlandığında admin’deki paketler ve fiyatlar, Stripe ve Vercel ile uyumlu çalışır.
+
+---
+
+## E. Test modu – Gerçek kart gerekmez
+
+- Stripe Dashboard'da sol üstte **Test mode** açıksa (toggle ile "Test" yazıyorsa) **test anahtarları** kullanılıyordur (`sk_test_...`, webhook'ta da test signing secret).
+- Bu durumda **gerçek kart kullanmanız gerekmez**; gerçek para çekilmez.
+- **Test kartı:**
+  - Numara: `4242 4242 4242 4242`
+  - Son kullanma: ileri bir tarih (örn. 12/34)
+  - CVC: herhangi 3 rakam (örn. 123)
+  - Ülke / posta kodu: istediğiniz geçerli değer
+- Ödeme adımını test etmek için `/start` sayfasından "Paket seç" → kayıt ol → giriş sonrası otomatik Stripe Checkout'a yönlendirilir; burada yukarıdaki test kartıyla deneyebilirsiniz.

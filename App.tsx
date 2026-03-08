@@ -16,6 +16,7 @@ import EmailConfirmGate from './components/EmailConfirmGate';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import SalesAgentView from './components/SalesAgentView';
 import LoginPage from './components/LoginPage';
+import StartLandingPage from './components/StartLandingPage';
 import ChatArchiveView from './components/ChatArchiveView';
 import NotificationsPanel from './components/NotificationsPanel';
 import { CATEGORIES as INITIAL_CATEGORIES } from './data';
@@ -39,6 +40,7 @@ function filterCategoriesBySearch(categories: Category[], query: string): Catego
 }
 
 function AppContent() {
+  const pathname = usePathname();
   const { user: authUser, loading: authLoading, signIn, signUp, signOut, isConfigured } = useAuth();
   // #region agent log
   fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'App.tsx:AppContent',message:'AppContent render',data:{authLoading,hasAuthUser:!!authUser},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
@@ -50,7 +52,20 @@ function AppContent() {
       </div>
     );
   }
+  if (authUser && pathname === '/start') {
+    window.history.replaceState({}, '', '/');
+    return <MainApp authUser={authUser} onLogout={signOut} />;
+  }
   if (!authUser) {
+    if (pathname === '/start') {
+      return (
+        <StartLandingPage
+          onSignUp={signUp}
+          onSignIn={signIn}
+          isConfigured={isConfigured}
+        />
+      );
+    }
     return (
       <LoginPage
         onSignIn={signIn}
@@ -63,9 +78,32 @@ function AppContent() {
 }
 
 function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: string }; onLogout: () => void }) {
+  const { session } = useAuth();
   // #region agent log
   fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'App.tsx:MainApp',message:'MainApp render start',data:{userId:authUser?.id},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
   // #endregion
+
+  // Redirect to Stripe Checkout when user came from /start with a plan (e.g. sign up → then checkout)
+  useEffect(() => {
+    const plan = typeof window !== 'undefined' ? window.sessionStorage.getItem('start_plan') : null;
+    if (!plan || plan === 'free' || !session?.access_token) return;
+    const targetTier = plan === 'premium' ? 'premium' : 'pro';
+    const base = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
+    fetch(`${base}/api/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ targetTier }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.url) {
+          window.sessionStorage.removeItem('start_plan');
+          window.location.href = data.url;
+        }
+      })
+      .catch(() => {});
+  }, [session?.access_token]);
+
   // Global Data State
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
 
