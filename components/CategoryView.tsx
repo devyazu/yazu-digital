@@ -1,5 +1,5 @@
 import React from 'react';
-import { Category, Tool, AccessLevel } from '../types';
+import { Category, Tool, UserTier, ToolAccessLevel, userTierCanAccessTool } from '../types';
 import { 
   Search, Zap, Lock, ArrowRight, Sparkles, Target, Crown, Gem, PlayCircle, BarChart3,
   ChevronDown, ChevronRight, LayoutGrid, BrainCircuit, MousePointerClick, TrendingUp, 
@@ -12,7 +12,7 @@ import {
 interface CategoryViewProps {
   category: Category;
   onSelectTool: (tool: Tool) => void;
-  userTier: AccessLevel;
+  userTier: UserTier;
 }
 
 const getIcon = (name: string, className?: string) => {
@@ -78,14 +78,9 @@ const getIcon = (name: string, className?: string) => {
 
 const CategoryView: React.FC<CategoryViewProps> = ({ category, onSelectTool, userTier }) => {
   
-  const hasAccess = (toolLevel: AccessLevel) => {
-    if (userTier === 'premium') return true;
-    if (userTier === 'pro' && toolLevel !== 'premium') return true;
-    if (userTier === 'basic' && toolLevel === 'basic') return true;
-    return false;
-  };
+  const hasAccess = (toolLevel: ToolAccessLevel) => userTierCanAccessTool(userTier, toolLevel);
 
-  const getTierColor = (level: AccessLevel) => {
+  const getTierColor = (level: ToolAccessLevel) => {
     switch (level) {
       case 'premium': return 'bg-purple-600/90 shadow-purple-200';
       case 'pro': return 'bg-brand-600/90 shadow-brand-200';
@@ -143,10 +138,10 @@ const CategoryView: React.FC<CategoryViewProps> = ({ category, onSelectTool, use
 
   // Sort tools: Basic -> Pro -> Premium
   const sortedTools = [...category.tools].sort((a, b) => {
-    const tierOrder: Record<AccessLevel, number> = {
-      'basic': 0,
-      'pro': 1,
-      'premium': 2
+    const tierOrder: Record<ToolAccessLevel, number> = {
+      basic: 0,
+      pro: 1,
+      premium: 2,
     };
     return tierOrder[a.accessLevel] - tierOrder[b.accessLevel];
   });

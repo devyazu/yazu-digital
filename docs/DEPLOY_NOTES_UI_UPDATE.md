@@ -15,7 +15,10 @@ After pulling this update:
 3. **Run migration 011 (notification reads – unread badge)**  
    Run the contents of `supabase/migrations/011_notification_reads.sql` so the header bell shows the unread count and “mark as read” works when the user opens the notifications panel.
 
-4. Avatars and brand logos use existing buckets and tables.
+4. **Run migration 012 (profiles tier & credits)**  
+   Run the contents of `supabase/migrations/012_profiles_tier_credits.sql` to add user tier (free, basic, pro, premium, enterprise), credits, and max_brands. New signups get a profile row with default tier via trigger. Admin can edit any user’s tier and credits in the Users tab.
+
+5. Avatars and brand logos use existing buckets and tables.
 
 ## Vercel
 

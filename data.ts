@@ -24,7 +24,15 @@ export const MOCK_USERS_LIST: UserProfile[] = [
   {
     id: "u-3", name: "John Doe", email: "john@doe.com", role: 'user', tier: 'pro',
     credits: { total: 15000, used: 2000 }, maxBrands: 3, joinedDate: "2024-02-15"
-  }
+  },
+  {
+    id: "u-4", name: "Free User", email: "free@example.com", role: 'user', tier: 'free',
+    credits: { total: 1000, used: 200 }, maxBrands: 1, joinedDate: "2024-03-01"
+  },
+  {
+    id: "u-5", name: "Enterprise Co", email: "enterprise@example.com", role: 'user', tier: 'enterprise',
+    credits: { total: 100000, used: 15000 }, maxBrands: 50, joinedDate: "2024-02-01"
+  },
 ];
 
 export const MOCK_BRANDS: Brand[] = [

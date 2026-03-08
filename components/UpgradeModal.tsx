@@ -1,12 +1,12 @@
 import React from 'react';
-import { AccessLevel } from '../types';
+import { UserTier } from '../types';
 import { X, Check, Zap, ArrowRight, ShieldCheck, Crown } from 'lucide-react';
 
 interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetTier: 'pro' | 'premium';
-  currentTier: AccessLevel;
+  currentTier: UserTier;
 }
 
 const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, targetTier, currentTier }) => {
@@ -16,7 +16,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, targetTier
   const daysInMonth = 30;
   const daysLeft = 14;
   
-  const currentPrice = currentTier === 'basic' ? 4.99 : 19.99;
+  const currentPrice = currentTier === 'free' ? 0 : currentTier === 'basic' ? 4.99 : currentTier === 'pro' ? 19.99 : 29.99;
   const newPrice = targetTier === 'premium' ? 29.99 : 19.99;
   
   // Calculate unused value of current plan

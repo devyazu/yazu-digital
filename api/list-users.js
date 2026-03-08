@@ -74,7 +74,7 @@ export default async function handler(req, res) {
 
     const userIds = userList.map((u) => u?.id).filter(Boolean);
     const { data: profilesRows } = userIds.length
-      ? await supabaseAdmin.from('profiles').select('id, full_name, company_name, job_title, avatar_url').in('id', userIds)
+      ? await supabaseAdmin.from('profiles').select('id, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands').in('id', userIds)
       : { data: [] };
     const profileById = new Map((profilesRows || []).map((p) => [p.id, p]));
 
@@ -87,9 +87,15 @@ export default async function handler(req, res) {
         created_at: u?.created_at ?? null,
         is_admin: adminSet.has(u?.email ?? ''),
         full_name: pro.full_name ?? null,
+        first_name: pro.first_name ?? null,
+        last_name: pro.last_name ?? null,
         company_name: pro.company_name ?? null,
         job_title: pro.job_title ?? null,
         avatar_url: pro.avatar_url ?? null,
+        tier: pro.tier ?? 'free',
+        credits_total: pro.credits_total ?? 0,
+        credits_used: pro.credits_used ?? 0,
+        max_brands: pro.max_brands ?? 1,
       };
     });
 

@@ -5,8 +5,16 @@ export interface ToolExample {
   output: string;
 }
 
-export type AccessLevel = 'basic' | 'pro' | 'premium';
+/** Tool access level (which tier can use this tool). */
+export type ToolAccessLevel = 'basic' | 'pro' | 'premium';
+
+/** User subscription / plan tier. Determines credits, max brands, and which tools they can use. */
+export type UserTier = 'free' | 'basic' | 'pro' | 'premium' | 'enterprise';
+
 export type UserRole = 'user' | 'admin';
+
+/** @deprecated Use UserTier for user profile, ToolAccessLevel for tool.accessLevel. */
+export type AccessLevel = ToolAccessLevel;
 
 export interface Tool {
   id: string;
@@ -16,7 +24,7 @@ export interface Tool {
   systemPrompt: string;
   examples: ToolExample[];
   iconName: string;
-  accessLevel: AccessLevel;
+  accessLevel: ToolAccessLevel;
   costPerUse: number;
   requiresDataConnection?: boolean;
   type?: 'sales' | 'hype'; 
@@ -36,7 +44,7 @@ export interface UserProfile {
   name: string;
   email: string;
   role: UserRole;
-  tier: AccessLevel;
+  tier: UserTier;
   credits: {
     total: number;
     used: number;
@@ -44,6 +52,26 @@ export interface UserProfile {
   avatarUrl?: string;
   maxBrands: number;
   joinedDate: string;
+}
+
+/** Default credits and max_brands per tier (for new users or admin reference). */
+export const TIER_DEFAULTS: Record<UserTier, { creditsTotal: number; maxBrands: number }> = {
+  free: { creditsTotal: 1000, maxBrands: 1 },
+  basic: { creditsTotal: 5000, maxBrands: 1 },
+  pro: { creditsTotal: 15000, maxBrands: 3 },
+  premium: { creditsTotal: 25000, maxBrands: 10 },
+  enterprise: { creditsTotal: 100000, maxBrands: 50 },
+};
+
+const TIER_ORDER: Record<string, number> = { free: 0, basic: 1, pro: 2, premium: 3, enterprise: 4 };
+
+/** Returns true if userTier is allowed to use a tool with the given access level. */
+export function userTierCanAccessTool(userTier: UserTier, toolLevel: ToolAccessLevel): boolean {
+  if (userTier === 'enterprise' || userTier === 'premium') return true;
+  if (userTier === 'pro' && toolLevel !== 'premium') return true;
+  if (userTier === 'basic' && toolLevel === 'basic') return true;
+  if (userTier === 'free' && toolLevel === 'basic') return true;
+  return false;
 }
 
 export interface HistoryItem {

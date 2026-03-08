@@ -17,8 +17,8 @@ import SalesAgentView from './components/SalesAgentView';
 import LoginPage from './components/LoginPage';
 import ChatArchiveView from './components/ChatArchiveView';
 import NotificationsPanel from './components/NotificationsPanel';
-import { CATEGORIES as INITIAL_CATEGORIES, MOCK_USER } from './data';
-import { Tool, Brand, Category, SalesAgentConfig } from './types';
+import { CATEGORIES as INITIAL_CATEGORIES } from './data';
+import { Tool, Brand, Category, SalesAgentConfig, UserProfile, userTierCanAccessTool, TIER_DEFAULTS } from './types';
 import { getBrands, createBrand, uploadBrandLogo } from './services/brandService';
 import { getProfile, type Profile } from './services/profileService';
 import { getUnreadNotificationCount } from './services/notificationsService';
@@ -92,8 +92,37 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const [profile, setProfile] = useState<Profile | null>(null);
   useEffect(() => {
     if (!authUser) return;
-    getProfile(authUser.id).then(({ profile: p }) => p && setProfile(p));
+    getProfile(authUser.id).then(({ profile: p }) => setProfile(p ?? null));
   }, [authUser?.id]);
+
+  const userProfile: UserProfile | null = useMemo(() => {
+    if (!authUser) return null;
+    const p = profile;
+    const tier = (p?.tier as UserProfile['tier']) ?? 'free';
+    const def = TIER_DEFAULTS[tier];
+    return {
+      id: authUser.id,
+      name: (p?.full_name || [p?.first_name, p?.last_name].filter(Boolean).join(' ')).trim() || authUser.email || 'User',
+      email: authUser.email ?? '',
+      role: 'user',
+      tier,
+      credits: { total: p?.credits_total ?? def.creditsTotal, used: p?.credits_used ?? 0 },
+      maxBrands: p?.max_brands ?? def.maxBrands,
+      avatarUrl: p?.avatar_url ?? undefined,
+      joinedDate: p?.created_at ? p.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    };
+  }, [authUser, profile]);
+
+  const DEFAULT_USER_PROFILE: UserProfile = useMemo(() => ({
+    id: authUser?.id ?? '',
+    name: 'User',
+    email: authUser?.email ?? '',
+    role: 'user',
+    tier: 'free',
+    credits: { total: TIER_DEFAULTS.free.creditsTotal, used: 0 },
+    maxBrands: 1,
+    joinedDate: new Date().toISOString().slice(0, 10),
+  }), [authUser?.id, authUser?.email]);
 
   // User State
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -133,16 +162,10 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   };
 
   const handleSelectTool = (tool: Tool) => {
-    const userTier = MOCK_USER.tier;
-    const toolLevel = tool.accessLevel;
-    let hasAccess = false;
-
-    if (userTier === 'premium') hasAccess = true;
-    else if (userTier === 'pro' && toolLevel !== 'premium') hasAccess = true;
-    else if (userTier === 'basic' && toolLevel === 'basic') hasAccess = true;
-
+    const userTier = userProfile?.tier ?? 'free';
+    const hasAccess = userTierCanAccessTool(userTier, tool.accessLevel);
     if (!hasAccess) {
-      setTargetUpgradeTier(toolLevel === 'premium' ? 'premium' : 'pro');
+      setTargetUpgradeTier(tool.accessLevel === 'premium' ? 'premium' : 'pro');
       setIsUpgradeModalOpen(true);
       return;
     }
@@ -229,7 +252,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
       <Header 
         onToggleSidebar={handleToggleSidebar} 
         onToggleDesktopSidebar={handleToggleDesktopSidebar}
-        user={MOCK_USER}
+        user={userProfile ?? DEFAULT_USER_PROFILE}
         profileAvatarUrl={profile?.avatar_url ?? undefined}
         brands={brands}
         currentBrand={currentBrand}
@@ -266,7 +289,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           onToggleDesktopSidebar={handleToggleDesktopSidebar}
           favorites={favorites}
           onToggleFavorite={handleToggleFavorite}
-          user={MOCK_USER}
+          user={userProfile ?? DEFAULT_USER_PROFILE}
           onLogout={onLogout}
         />
         
@@ -275,7 +298,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
             categories={filteredCategories} 
             onSelectTool={handleSelectTool}
             onSelectCategory={handleSelectCategory}
-            userTier={MOCK_USER.tier}
+            userTier={(userProfile ?? DEFAULT_USER_PROFILE).tier}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
@@ -285,14 +308,14 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           <CategoryView 
             category={selectedCategory}
             onSelectTool={handleSelectTool}
-            userTier={MOCK_USER.tier}
+            userTier={(userProfile ?? DEFAULT_USER_PROFILE).tier}
           />
         )}
 
         {view === 'brands-list' && (
           <BrandsView 
             brands={brands} 
-            user={MOCK_USER}
+            user={userProfile ?? DEFAULT_USER_PROFILE}
             onSelectBrand={handleBrandSelect}
             onManageBrand={handleManageBrand}
             onAddNew={handleAddNewBrand}
@@ -325,7 +348,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         {view === 'settings' && (
           <SettingsView 
             authUser={authUser} 
-            user={MOCK_USER} 
+            user={userProfile ?? DEFAULT_USER_PROFILE} 
             profile={profile}
             onProfileUpdate={setProfile}
           />
@@ -370,7 +393,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           isOpen={isUpgradeModalOpen}
           onClose={() => setIsUpgradeModalOpen(false)}
           targetTier={targetUpgradeTier}
-          currentTier={MOCK_USER.tier}
+          currentTier={(userProfile ?? DEFAULT_USER_PROFILE).tier}
         />
       )}
     </div>

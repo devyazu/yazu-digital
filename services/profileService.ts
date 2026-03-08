@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
 
+export type ProfileTier = 'free' | 'basic' | 'pro' | 'premium' | 'enterprise';
+
 export interface Profile {
   id: string;
   email_confirmed_at: string | null;
@@ -10,6 +12,10 @@ export interface Profile {
   company_name: string | null;
   job_title: string | null;
   avatar_url: string | null;
+  tier: ProfileTier;
+  credits_total: number;
+  credits_used: number;
+  max_brands: number;
 }
 
 const CONFIRM_DEADLINE_HOURS = 3;
@@ -20,10 +26,17 @@ export async function getProfile(userId: string): Promise<{ profile: Profile | n
   if (!supabase) return { profile: null, error: new Error('Supabase not configured') };
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url')
+    .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands')
     .eq('id', userId)
     .maybeSingle();
-  return { profile: data as Profile | null, error: error ?? null };
+  const profile = data as Profile | null;
+  if (profile && (profile.tier == null || profile.credits_total == null)) {
+    profile.tier = profile.tier ?? 'free';
+    profile.credits_total = profile.credits_total ?? 1000;
+    profile.credits_used = profile.credits_used ?? 0;
+    profile.max_brands = profile.max_brands ?? 1;
+  }
+  return { profile, error: error ?? null };
 }
 
 export interface ProfileUpdate {
@@ -33,6 +46,10 @@ export interface ProfileUpdate {
   company_name?: string | null;
   job_title?: string | null;
   avatar_url?: string | null;
+  tier?: ProfileTier | null;
+  credits_total?: number | null;
+  credits_used?: number | null;
+  max_brands?: number | null;
 }
 
 export async function updateProfile(userId: string, updates: ProfileUpdate): Promise<{ error: Error | null }> {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Category, Tool, AccessLevel } from '../types';
+import { Category, Tool, UserTier, ToolAccessLevel, userTierCanAccessTool } from '../types';
 import { 
   Search, Lock, Zap, ArrowRight, Sparkles, PlayCircle, BarChart3, Target, Crown, Gem, Layout,
   ChevronDown, ChevronRight, LayoutGrid, BrainCircuit, MousePointerClick, TrendingUp, 
@@ -13,7 +13,7 @@ interface DashboardProps {
   categories: Category[];
   onSelectTool: (tool: Tool) => void;
   onSelectCategory: (category: Category) => void;
-  userTier: AccessLevel;
+  userTier: UserTier;
   searchQuery?: string;
   onSearchChange?: (value: string) => void;
 }
@@ -81,15 +81,9 @@ const getIcon = (name: string, className?: string) => {
 
 const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelectCategory, userTier, searchQuery, onSearchChange }) => {
   
-  // Helper to check if user has access
-  const hasAccess = (toolLevel: AccessLevel) => {
-    if (userTier === 'premium') return true;
-    if (userTier === 'pro' && toolLevel !== 'premium') return true;
-    if (userTier === 'basic' && toolLevel === 'basic') return true;
-    return false;
-  };
+  const hasAccess = (toolLevel: ToolAccessLevel) => userTierCanAccessTool(userTier, toolLevel);
 
-  const getTierColor = (level: AccessLevel) => {
+  const getTierColor = (level: ToolAccessLevel) => {
     switch (level) {
       case 'premium': return 'bg-purple-600/90 shadow-purple-200';
       case 'pro': return 'bg-brand-600/90 shadow-brand-200';

@@ -17,9 +17,15 @@ export interface AdminUserRow {
   created_at: string;
   is_admin: boolean;
   full_name: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   company_name: string | null;
   job_title: string | null;
   avatar_url: string | null;
+  tier: string;
+  credits_total: number;
+  credits_used: number;
+  max_brands: number;
 }
 
 interface AdminViewProps {
@@ -50,6 +56,10 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [usersSearch, setUsersSearch] = useState('');
+  const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
+  const [editUserForm, setEditUserForm] = useState<Partial<AdminUserRow> & { is_admin?: boolean }>({});
+  const [editUserSaving, setEditUserSaving] = useState(false);
+  const [editUserError, setEditUserError] = useState<string | null>(null);
   const [notificationsList, setNotificationsList] = useState<Array<{ id: string; title: string; body: string; created_at: string; target_type: string; target_user_ids: string[] | null }>>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notifTitle, setNotifTitle] = useState('');
@@ -251,6 +261,69 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
   };
 
+  const openEditUser = (u: AdminUserRow) => {
+    setEditingUser(u);
+    setEditUserForm({
+      full_name: u.full_name ?? '',
+      first_name: u.first_name ?? '',
+      last_name: u.last_name ?? '',
+      company_name: u.company_name ?? '',
+      job_title: u.job_title ?? '',
+      tier: u.tier ?? 'free',
+      credits_total: u.credits_total ?? 0,
+      credits_used: u.credits_used ?? 0,
+      max_brands: u.max_brands ?? 1,
+      is_admin: u.is_admin,
+    });
+    setEditUserError(null);
+  };
+
+  const saveEditUser = async () => {
+    if (!editingUser || !session?.access_token) return;
+    setEditUserSaving(true);
+    setEditUserError(null);
+    try {
+      const r = await fetch('/api/admin/update-user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          user_id: editingUser.id,
+          full_name: editUserForm.full_name || null,
+          first_name: editUserForm.first_name || null,
+          last_name: editUserForm.last_name || null,
+          company_name: editUserForm.company_name || null,
+          job_title: editUserForm.job_title || null,
+          tier: editUserForm.tier || 'free',
+          credits_total: Number(editUserForm.credits_total) ?? 0,
+          credits_used: Number(editUserForm.credits_used) ?? 0,
+          max_brands: Math.max(1, Number(editUserForm.max_brands) || 1),
+          is_admin: editUserForm.is_admin,
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || `Hata ${r.status}`);
+      setRealUsers((prev) =>
+        prev.map((x) =>
+          x.id === editingUser.id
+            ? {
+                ...x,
+                ...editUserForm,
+                credits_total: Number(editUserForm.credits_total) ?? x.credits_total,
+                credits_used: Number(editUserForm.credits_used) ?? x.credits_used,
+                max_brands: Math.max(1, Number(editUserForm.max_brands) || 1),
+                is_admin: editUserForm.is_admin ?? x.is_admin,
+              }
+            : x
+        )
+      );
+      setEditingUser(null);
+    } catch (e) {
+      setEditUserError(e instanceof Error ? e.message : 'Kaydedilemedi');
+    } finally {
+      setEditUserSaving(false);
+    }
+  };
+
   // --- ANALYTICS VIEW ---
   const renderDeepAnalytics = () => (
     <div className="space-y-8 animate-in fade-in">
@@ -444,14 +517,18 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
               <th className="px-6 py-3">Kullanıcı</th>
               <th className="px-6 py-3">E-posta</th>
               <th className="px-6 py-3">Şirket / Unvan</th>
+              <th className="px-6 py-3">Tier</th>
+              <th className="px-6 py-3">Credits</th>
+              <th className="px-6 py-3">Max brands</th>
               <th className="px-6 py-3">Kayıt tarihi</th>
               <th className="px-6 py-3">Rol</th>
+              <th className="px-6 py-3">İşlem</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {filteredRealUsers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-stone-400">
+                <td colSpan={9} className="px-6 py-8 text-center text-stone-400">
                   {realUsers.length === 0 && !usersLoading ? 'Henüz kullanıcı yok.' : 'Eşleşen kullanıcı yok.'}
                 </td>
               </tr>
@@ -480,6 +557,13 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                     <div>{user.company_name || '—'}</div>
                     <div className="text-xs text-stone-400">{user.job_title || '—'}</div>
                   </td>
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-bold px-2 py-1 rounded bg-stone-100 text-stone-700 capitalize">{user.tier ?? 'free'}</span>
+                  </td>
+                  <td className="px-6 py-4 text-stone-600">
+                    {(user.credits_total ?? 0) - (user.credits_used ?? 0)} / {user.credits_total ?? 0}
+                  </td>
+                  <td className="px-6 py-4 text-stone-600">{user.max_brands ?? 1}</td>
                   <td className="px-6 py-4 text-stone-600">
                     {user.created_at ? new Date(user.created_at).toLocaleDateString('tr-TR', {
                       day: 'numeric',
@@ -494,11 +578,90 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                       {user.is_admin ? 'Admin' : 'User'}
                     </span>
                   </td>
+                  <td className="px-6 py-4">
+                    <button
+                      type="button"
+                      onClick={() => openEditUser(user)}
+                      className="text-brand-600 hover:text-brand-700 font-medium text-sm"
+                    >
+                      Düzenle
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+      )}
+
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => !editUserSaving && setEditingUser(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-stone-800 mb-4">Kullanıcı düzenle</h3>
+            <p className="text-sm text-stone-500 mb-4">{editingUser.email}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Ad Soyad</label>
+                <input value={editUserForm.full_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, full_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" placeholder="Full name" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Ad</label>
+                  <input value={editUserForm.first_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, first_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Soyad</label>
+                  <input value={editUserForm.last_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, last_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Şirket</label>
+                <input value={editUserForm.company_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, company_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Unvan</label>
+                <input value={editUserForm.job_title ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, job_title: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Tier</label>
+                <select value={editUserForm.tier ?? 'free'} onChange={(e) => setEditUserForm((f) => ({ ...f, tier: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm">
+                  <option value="free">Free</option>
+                  <option value="basic">Basic</option>
+                  <option value="pro">Pro</option>
+                  <option value="premium">Premium</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Credits total</label>
+                  <input type="number" min={0} value={editUserForm.credits_total ?? 0} onChange={(e) => setEditUserForm((f) => ({ ...f, credits_total: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Credits used</label>
+                  <input type="number" min={0} value={editUserForm.credits_used ?? 0} onChange={(e) => setEditUserForm((f) => ({ ...f, credits_used: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Max brands</label>
+                <input type="number" min={1} max={100} value={editUserForm.max_brands ?? 1} onChange={(e) => setEditUserForm((f) => ({ ...f, max_brands: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={editUserForm.is_admin ?? false} onChange={(e) => setEditUserForm((f) => ({ ...f, is_admin: e.target.checked }))} className="rounded border-stone-300" />
+                <span className="text-sm font-medium text-stone-700">Admin</span>
+              </label>
+            </div>
+            {editUserError && <p className="text-red-600 text-sm mt-2">{editUserError}</p>}
+            <div className="flex gap-2 mt-6">
+              <button type="button" onClick={saveEditUser} disabled={editUserSaving} className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50">
+                {editUserSaving ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
+              <button type="button" onClick={() => setEditingUser(null)} disabled={editUserSaving} className="px-4 py-2 border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50">
+                İptal
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
