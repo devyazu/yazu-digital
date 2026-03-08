@@ -25,35 +25,43 @@ const AVATAR_BUCKET = 'avatars';
 const AVATAR_MAX_SIZE = 1024 * 1024; // 1MB
 
 export async function getProfile(userId: string): Promise<{ profile: Profile | null; error: Error | null }> {
-  if (!supabase) return { profile: null, error: new Error('Supabase not configured') };
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands')
-    .eq('id', userId)
-    .maybeSingle();
-  const profile = data as Profile | null;
-  if (profile) {
-    if (profile.tier == null || profile.credits_total == null) {
-      profile.tier = profile.tier ?? 'free';
-      profile.credits_total = profile.credits_total ?? 1000;
-      profile.credits_used = profile.credits_used ?? 0;
-      profile.max_brands = profile.max_brands ?? 1;
+  try {
+    if (!supabase) return { profile: null, error: new Error('Supabase not configured') };
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands')
+      .eq('id', userId)
+      .maybeSingle();
+    const profile = data as Profile | null;
+    if (profile) {
+      if (profile.tier == null || profile.credits_total == null) {
+        profile.tier = profile.tier ?? 'free';
+        profile.credits_total = profile.credits_total ?? 1000;
+        profile.credits_used = profile.credits_used ?? 0;
+        profile.max_brands = profile.max_brands ?? 1;
+      }
     }
+    return { profile, error: error ?? null };
+  } catch (e) {
+    return { profile: null, error: e instanceof Error ? e : new Error(String(e)) };
   }
-  return { profile, error: error ?? null };
 }
 
-/** Load only favorite_tool_ids so profile fetch never fails if column is missing. Returns [] on error or missing column. */
+/** Load only favorite_tool_ids. Returns [] on error or if column does not exist (run migration 013). */
 export async function getFavoriteToolIds(userId: string): Promise<string[]> {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('favorite_tool_ids')
-    .eq('id', userId)
-    .maybeSingle();
-  if (error || data == null) return [];
-  const raw = (data as { favorite_tool_ids?: unknown })?.favorite_tool_ids;
-  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
+  try {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('favorite_tool_ids')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error || data == null) return [];
+    const raw = (data as { favorite_tool_ids?: unknown })?.favorite_tool_ids;
+    return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 export interface ProfileUpdate {

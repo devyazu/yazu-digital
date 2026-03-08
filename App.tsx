@@ -92,14 +92,18 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const [profile, setProfile] = useState<Profile | null>(null);
   useEffect(() => {
     if (!authUser) return;
-    getProfile(authUser.id).then(({ profile: p }) => setProfile(p ?? null));
+    getProfile(authUser.id)
+      .then(({ profile: p }) => setProfile(p ?? null))
+      .catch(() => setProfile(null));
   }, [authUser?.id]);
 
   // Favorites: load separately so missing DB column never breaks profile
   const [favorites, setFavorites] = useState<string[]>([]);
   useEffect(() => {
     if (!authUser?.id) return;
-    getFavoriteToolIds(authUser.id).then((ids) => setFavorites(Array.isArray(ids) ? ids : []));
+    getFavoriteToolIds(authUser.id)
+      .then((ids) => setFavorites(Array.isArray(ids) ? ids : []))
+      .catch(() => setFavorites([]));
   }, [authUser?.id]);
 
   const userProfile: UserProfile | null = useMemo(() => {
