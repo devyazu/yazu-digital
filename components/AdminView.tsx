@@ -38,7 +38,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const { session } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail' | 'notifications'>('tools');
   const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS_LIST);
-  // E-posta şablonları
+  // Email templates
   const [emailTemplates, setEmailTemplates] = useState<Array<{ id: string; slug: string; name: string; description: string | null; subject: string; body_html: string; body_json: string | null; from_name: string | null; recipient_type: string; is_active: boolean; updated_at: string }>>([]);
   const [emailTemplatesLoading, setEmailTemplatesLoading] = useState(false);
   const [emailTemplatesError, setEmailTemplatesError] = useState<string | null>(null);
@@ -83,11 +83,11 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       .then(async (r) => {
         const data = await r.json().catch(() => ({}));
         if (!r.ok) {
-          const msg = data?.error || `Hata ${r.status}`;
+          const msg = data?.error || `Error ${r.status}`;
           const detail = data?.detail ? ` (${data.detail})` : '';
-          if (r.status === 401) throw new Error('Oturum geçersiz. Çıkış yapıp tekrar giriş yapın.');
-          if (r.status === 403) throw new Error('Admin yetkisi gerekli.');
-          if (r.status === 503) throw new Error('Sunucu ayarları eksik. Vercel\'de SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY tanımlı olmalı.');
+          if (r.status === 401) throw new Error('Session invalid. Please sign out and sign in again.');
+          if (r.status === 403) throw new Error('Admin permission required.');
+          if (r.status === 503) throw new Error('Server configuration missing. Set SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY on Vercel.');
           throw new Error(msg + detail);
         }
         return data;
@@ -97,7 +97,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       })
       .catch((err) => {
         setRealUsers([]);
-        setUsersError(err?.message || 'Kullanıcılar yüklenemedi.');
+        setUsersError(err?.message || 'Failed to load users.');
       })
       .finally(() => setUsersLoading(false));
   }, [activeTab, session?.access_token]);
@@ -109,7 +109,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     fetch('/api/admin/email-templates', { headers: { Authorization: `Bearer ${session.access_token}` } })
       .then(async (r) => {
         const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(data?.error || `Hata ${r.status}`);
+        if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
         return data;
       })
       .then((data) => {
@@ -117,7 +117,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
         if (!selectedTemplateSlug && (data.templates?.length > 0)) setSelectedTemplateSlug(data.templates[0].slug);
       })
       .catch((err) => {
-        setEmailTemplatesError(err?.message || 'Şablonlar yüklenemedi.');
+        setEmailTemplatesError(err?.message || 'Failed to load templates.');
       })
       .finally(() => setEmailTemplatesLoading(false));
   }, [activeTab, session?.access_token]);
@@ -264,11 +264,10 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const openEditUser = (u: AdminUserRow) => {
     setEditingUser(u);
     setEditUserForm({
-      full_name: u.full_name ?? '',
+      email: u.email ?? '',
       first_name: u.first_name ?? '',
       last_name: u.last_name ?? '',
       company_name: u.company_name ?? '',
-      job_title: u.job_title ?? '',
       tier: u.tier ?? 'free',
       credits_total: u.credits_total ?? 0,
       credits_used: u.credits_used ?? 0,
@@ -288,11 +287,10 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({
           user_id: editingUser.id,
-          full_name: editUserForm.full_name || null,
+          email: editUserForm.email?.trim() || undefined,
           first_name: editUserForm.first_name || null,
           last_name: editUserForm.last_name || null,
           company_name: editUserForm.company_name || null,
-          job_title: editUserForm.job_title || null,
           tier: editUserForm.tier || 'free',
           credits_total: Number(editUserForm.credits_total) ?? 0,
           credits_used: Number(editUserForm.credits_used) ?? 0,
@@ -307,7 +305,11 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
           x.id === editingUser.id
             ? {
                 ...x,
-                ...editUserForm,
+                email: editUserForm.email?.trim() || x.email,
+                first_name: editUserForm.first_name ?? x.first_name,
+                last_name: editUserForm.last_name ?? x.last_name,
+                company_name: editUserForm.company_name ?? x.company_name,
+                tier: editUserForm.tier ?? x.tier,
                 credits_total: Number(editUserForm.credits_total) ?? x.credits_total,
                 credits_used: Number(editUserForm.credits_used) ?? x.credits_used,
                 max_brands: Math.max(1, Number(editUserForm.max_brands) || 1),
@@ -318,7 +320,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       );
       setEditingUser(null);
     } catch (e) {
-      setEditUserError(e instanceof Error ? e.message : 'Kaydedilemedi');
+      setEditUserError(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setEditUserSaving(false);
     }
@@ -474,7 +476,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     </div>
   );
 
-  // --- USERS MANAGEMENT VIEW (Supabase gerçek kullanıcılar) ---
+  // --- USERS MANAGEMENT VIEW (Supabase real users) ---
   const filteredRealUsers = usersSearch.trim()
     ? realUsers.filter((u) => {
         const q = usersSearch.trim().toLowerCase();
@@ -489,12 +491,12 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const renderUsers = () => (
     <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in">
       <div className="p-4 border-b border-stone-200 flex justify-between items-center bg-stone-50">
-        <h3 className="font-bold text-stone-800">Kullanıcı Yönetimi</h3>
+        <h3 className="font-bold text-stone-800">User management</h3>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
           <input
             type="text"
-            placeholder="E-posta ile ara..."
+            placeholder="Search by email..."
             value={usersSearch}
             onChange={(e) => setUsersSearch(e.target.value)}
             className="pl-9 pr-4 py-2 rounded-lg border border-stone-200 text-sm focus:outline-none focus:border-brand-500"
@@ -508,28 +510,28 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       ) : usersError ? (
         <div className="p-8 text-center">
           <p className="text-red-600 font-medium mb-2">{usersError}</p>
-          <p className="text-sm text-stone-500">Vercel ortam değişkenlerinde SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY tanımlı olduğundan emin olun.</p>
+          <p className="text-sm text-stone-500">Ensure SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are set in Vercel environment variables.</p>
         </div>
       ) : (
         <table className="w-full text-left text-sm">
           <thead className="bg-stone-100 text-stone-500 font-medium">
             <tr>
-              <th className="px-6 py-3">Kullanıcı</th>
-              <th className="px-6 py-3">E-posta</th>
-              <th className="px-6 py-3">Şirket / Unvan</th>
+              <th className="px-6 py-3">User</th>
+              <th className="px-6 py-3">Email</th>
+              <th className="px-6 py-3">Company</th>
               <th className="px-6 py-3">Tier</th>
               <th className="px-6 py-3">Credits</th>
               <th className="px-6 py-3">Max brands</th>
-              <th className="px-6 py-3">Kayıt tarihi</th>
-              <th className="px-6 py-3">Rol</th>
-              <th className="px-6 py-3">İşlem</th>
+              <th className="px-6 py-3">Joined</th>
+              <th className="px-6 py-3">Role</th>
+              <th className="px-6 py-3">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {filteredRealUsers.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-6 py-8 text-center text-stone-400">
-                  {realUsers.length === 0 && !usersLoading ? 'Henüz kullanıcı yok.' : 'Eşleşen kullanıcı yok.'}
+                  {realUsers.length === 0 && !usersLoading ? 'No users yet.' : 'No matching users.'}
                 </td>
               </tr>
             ) : (
@@ -553,10 +555,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                   <td className="px-6 py-4">
                     <div className="text-stone-700">{user.email}</div>
                   </td>
-                  <td className="px-6 py-4 text-stone-600">
-                    <div>{user.company_name || '—'}</div>
-                    <div className="text-xs text-stone-400">{user.job_title || '—'}</div>
-                  </td>
+                  <td className="px-6 py-4 text-stone-600">{user.company_name || '—'}</td>
                   <td className="px-6 py-4">
                     <span className="text-xs font-bold px-2 py-1 rounded bg-stone-100 text-stone-700 capitalize">{user.tier ?? 'free'}</span>
                   </td>
@@ -584,7 +583,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                       onClick={() => openEditUser(user)}
                       className="text-brand-600 hover:text-brand-700 font-medium text-sm"
                     >
-                      Düzenle
+                      Edit
                     </button>
                   </td>
                 </tr>
@@ -597,30 +596,25 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => !editUserSaving && setEditingUser(null)}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-stone-800 mb-4">Kullanıcı düzenle</h3>
-            <p className="text-sm text-stone-500 mb-4">{editingUser.email}</p>
+            <h3 className="font-bold text-stone-800 mb-4">Edit user</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Ad Soyad</label>
-                <input value={editUserForm.full_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, full_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" placeholder="Full name" />
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Email</label>
+                <input type="email" value={editUserForm.email ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, email: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" placeholder="email@example.com" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Ad</label>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">First name</label>
                   <input value={editUserForm.first_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, first_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Soyad</label>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Last name</label>
                   <input value={editUserForm.last_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, last_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Şirket</label>
+                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Company</label>
                 <input value={editUserForm.company_name ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, company_name: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Unvan</label>
-                <input value={editUserForm.job_title ?? ''} onChange={(e) => setEditUserForm((f) => ({ ...f, job_title: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Tier</label>
@@ -654,10 +648,10 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
             {editUserError && <p className="text-red-600 text-sm mt-2">{editUserError}</p>}
             <div className="flex gap-2 mt-6">
               <button type="button" onClick={saveEditUser} disabled={editUserSaving} className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50">
-                {editUserSaving ? 'Kaydediliyor...' : 'Kaydet'}
+                {editUserSaving ? 'Saving...' : 'Save'}
               </button>
               <button type="button" onClick={() => setEditingUser(null)} disabled={editUserSaving} className="px-4 py-2 border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50">
-                İptal
+                Cancel
               </button>
             </div>
           </div>
@@ -1001,7 +995,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     } catch (_e) {
       // ignore serialization errors
     }
-    // Önce fullscreen kapat; unmount sırasında state güncellemesi crash’e yol açabiliyor
+    // Close fullscreen first; state updates during unmount can cause crashes
     setEmailEditorFullscreen(false);
     if (html != null || json != null) {
       setTimeout(() => {
@@ -1025,7 +1019,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       if (!r.ok) throw new Error(data?.error || data?.detail || `Hata ${r.status}`);
       setTestEmailError(null);
     } catch (e) {
-      setTestEmailError(e?.message || 'Test maili gönderilemedi.');
+      setTestEmailError(e?.message || 'Failed to send test email.');
     } finally {
       setTestEmailSending(false);
     }
@@ -1034,7 +1028,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const renderMail = () => (
     <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in">
       <div className="p-4 border-b border-stone-200 bg-stone-50 flex flex-wrap items-center gap-4">
-        <h3 className="font-bold text-stone-800">E-posta şablonları</h3>
+        <h3 className="font-bold text-stone-800">Email templates</h3>
       </div>
       {emailTemplatesLoading ? (
         <div className="flex items-center justify-center py-16">
@@ -1060,7 +1054,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
               <>
                 <div className="space-y-4 max-w-2xl">
                   <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1">Konu</label>
+                    <label className="block text-xs font-bold text-stone-500 mb-1">Subject</label>
                     <input
                       value={editSubject}
                       onChange={(e) => setEditSubject(e.target.value)}
@@ -1068,15 +1062,15 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1">İçerik</label>
+                    <label className="block text-xs font-bold text-stone-500 mb-1">Content</label>
                     <button
                       type="button"
                       onClick={() => setEmailEditorFullscreen(true)}
                       className="w-full py-6 border-2 border-dashed border-stone-300 rounded-xl text-stone-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50/50 transition-colors flex flex-col items-center justify-center gap-2"
                     >
                       <Mail className="w-10 h-10 text-stone-400" />
-                      <span className="font-medium">E-postayı tasarla</span>
-                      <span className="text-xs">Tam ekran sürükle-bırak editörü aç</span>
+                      <span className="font-medium">Design email</span>
+                      <span className="text-xs">Open full-screen drag-and-drop editor</span>
                     </button>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1086,18 +1080,18 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                       className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
                     >
                       {templateSaveStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
-                      Kaydet
+                      Save
                     </button>
-                    {templateSaveStatus === 'ok' && <span className="text-green-600 text-sm">Kaydedildi.</span>}
-                    {templateSaveStatus === 'error' && <span className="text-red-600 text-sm">Kaydetme hatası.</span>}
+                    {templateSaveStatus === 'ok' && <span className="text-green-600 text-sm">Saved.</span>}
+                    {templateSaveStatus === 'error' && <span className="text-red-600 text-sm">Save error.</span>}
                   </div>
                 </div>
                 <div className="mt-8 pt-6 border-t border-stone-200 max-w-2xl">
-                  <h4 className="font-bold text-stone-700 mb-2">Test maili gönder</h4>
+                  <h4 className="font-bold text-stone-700 mb-2">Send test email</h4>
                   <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="email"
-                      placeholder="E-posta adresi"
+                      placeholder="Email address"
                       value={testEmailTo}
                       onChange={(e) => setTestEmailTo(e.target.value)}
                       className="px-3 py-2 border border-stone-200 rounded-lg text-sm w-64"
@@ -1108,7 +1102,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                       className="px-4 py-2 bg-stone-700 text-white text-sm font-bold rounded-lg hover:bg-stone-800 disabled:opacity-50 flex items-center gap-2"
                     >
                       {testEmailSending && <Loader2 className="w-4 h-4 animate-spin" />}
-                      Gönder
+                      Send
                     </button>
                   </div>
                   {testEmailError && <p className="mt-2 text-sm text-red-600">{testEmailError}</p>}
@@ -1125,7 +1119,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
 
   return (
     <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#F2F2F0] relative">
-      {/* Tam ekran e-posta editörü */}
+      {/* Full-screen email editor */}
       {emailEditorFullscreen && selectedTemplateSlug && (
         <EmailEditorErrorBoundary onClose={handleCloseFullscreenEditor}>
           <div className="fixed inset-0 z-50 flex flex-col bg-white min-w-0">
@@ -1136,14 +1130,14 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                   onClick={handleCloseFullscreenEditor}
                   className="text-stone-600 hover:text-stone-800 font-medium flex items-center gap-2"
                 >
-                  ← Geri
+                  ← Back
                 </button>
                 <span className="text-stone-500">|</span>
                 <span className="font-bold text-stone-800">{selectedTemplateName || selectedTemplateSlug}</span>
               </div>
               <div className="flex items-center gap-2">
-                {templateSaveStatus === 'ok' && <span className="text-green-600 text-sm">Kaydedildi</span>}
-                {templateSaveStatus === 'error' && <span className="text-red-600 text-sm">Hata</span>}
+                {templateSaveStatus === 'ok' && <span className="text-green-600 text-sm">Saved</span>}
+                {templateSaveStatus === 'error' && <span className="text-red-600 text-sm">Error</span>}
                 <button
                   type="button"
                   onClick={handleSaveTemplate}
@@ -1151,15 +1145,15 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                   className="px-4 py-2 bg-brand-600 text-white text-sm font-bold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
                 >
                   {templateSaveStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Kaydet
+                  Save
                 </button>
               </div>
             </div>
-            {/* body_json yoksa orijinal HTML’i göster */}
+            {/* Show original HTML when body_json is missing */}
             {editBodyHtml?.trim() && !editBodyJson?.trim() && (
               <div className="flex-shrink-0 border-b border-stone-200 bg-amber-50/80 p-3">
                 <p className="text-xs font-medium text-amber-800 mb-2">
-                  Bu şablon eski formatta (sadece HTML). Aşağıdaki sürükle-bırak editörde yeniden oluşturup Kaydet’e basarsanız yeni format kaydedilir.
+                  This template is in legacy format (HTML only). Recreate it in the drag-and-drop editor below and click Save to store the new format.
                 </p>
                 <div
                   className="max-h-32 overflow-auto rounded border border-amber-200 bg-white p-3 text-sm text-stone-700 prose prose-sm max-w-none"

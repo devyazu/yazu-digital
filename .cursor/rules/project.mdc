@@ -1,0 +1,17 @@
+---
+description: Project-wide rules for language and deployment
+alwaysApply: true
+---
+
+# Project rules
+
+## Language
+
+The application language is **English**. Any Turkish text in the codebase or UI must be converted to English.
+
+## After code changes
+
+When any update is made to the software:
+
+1. **Git**: Push the changes to git.
+2. **Deployment**: At the end of the work, state clearly if anything must be done on **Supabase** or **Vercel** (e.g. new env vars, migrations, redeploy).

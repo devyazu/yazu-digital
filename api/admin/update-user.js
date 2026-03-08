@@ -39,11 +39,15 @@ export default async function handler(req, res) {
   }
 
   const profileUpdates = {};
-  if (body.full_name !== undefined) profileUpdates.full_name = body.full_name;
   if (body.first_name !== undefined) profileUpdates.first_name = body.first_name;
   if (body.last_name !== undefined) profileUpdates.last_name = body.last_name;
   if (body.company_name !== undefined) profileUpdates.company_name = body.company_name;
-  if (body.job_title !== undefined) profileUpdates.job_title = body.job_title;
+  if (body.first_name !== undefined || body.last_name !== undefined) {
+    const { data: existing } = await supabaseAdmin.from('profiles').select('first_name, last_name').eq('id', userId).single();
+    const first = body.first_name !== undefined ? String(body.first_name).trim() || null : (existing?.first_name ?? null);
+    const last = body.last_name !== undefined ? String(body.last_name).trim() || null : (existing?.last_name ?? null);
+    profileUpdates.full_name = [first, last].filter(Boolean).join(' ') || null;
+  }
   if (body.tier !== undefined) {
     if (!VALID_TIERS.includes(body.tier)) {
       return send(res, 400, { error: 'tier must be one of: ' + VALID_TIERS.join(', ') });
@@ -65,9 +69,32 @@ export default async function handler(req, res) {
     }
   }
 
+  let currentEmail = null;
+  if (body.email !== undefined && body.email !== '') {
+    const newEmail = String(body.email).trim().toLowerCase();
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    currentEmail = userData?.user?.email;
+    if (!currentEmail) {
+      return send(res, 404, { error: 'User not found' });
+    }
+    if (newEmail !== currentEmail) {
+      const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: newEmail });
+      if (emailError) {
+        console.error('updateUserById email error:', emailError);
+        return send(res, 400, { error: 'Failed to update email', detail: emailError?.message });
+      }
+      const { data: wasAdminRow } = await supabaseAdmin.from('admin_users').select('email').eq('email', currentEmail).maybeSingle();
+      if (wasAdminRow) {
+        await supabaseAdmin.from('admin_users').delete().eq('email', currentEmail);
+        await supabaseAdmin.from('admin_users').upsert({ email: newEmail }, { onConflict: 'email' });
+      }
+      currentEmail = newEmail;
+    }
+  }
+
   if (body.is_admin !== undefined) {
     const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
-    const email = userData?.user?.email;
+    const email = currentEmail ?? userData?.user?.email;
     if (!email) {
       return send(res, 404, { error: 'User not found' });
     }
