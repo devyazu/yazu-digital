@@ -1,6 +1,45 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabaseMain, supabaseAdmin } from '../lib/supabase';
+
+const ADMIN_DOMAIN = (import.meta.env.VITE_ADMIN_DOMAIN || 'admin.yazu.digital').toLowerCase();
+
+function usePathname(): string {
+  const [pathname, setPathname] = useState(
+    () => (typeof window !== 'undefined' ? window.location.pathname : '')
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const update = () => setPathname(window.location.pathname);
+    const origPush = history.pushState;
+    const origReplace = history.replaceState;
+    history.pushState = function (...args) {
+      origPush.apply(this, args);
+      update();
+    };
+    history.replaceState = function (...args) {
+      origReplace.apply(this, args);
+      update();
+    };
+    window.addEventListener('popstate', update);
+    return () => {
+      history.pushState = origPush;
+      history.replaceState = origReplace;
+      window.removeEventListener('popstate', update);
+    };
+  }, []);
+  return pathname;
+}
+
+function useSupabaseForAuth() {
+  const pathname = usePathname();
+  const isAdmin =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === ADMIN_DOMAIN ||
+      pathname === '/admin' ||
+      pathname.startsWith('/admin/'));
+  return isAdmin ? supabaseAdmin : supabaseMain;
+}
 
 interface AuthContextValue {
   user: User | null;
@@ -18,23 +57,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const supabase = useSupabaseForAuth();
 
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
       return;
     }
+    setLoading(true);
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
       setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) return { error: new Error('Supabase not configured') };
@@ -69,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    isConfigured: Boolean(supabase),
+    isConfigured: Boolean(supabaseMain ?? supabaseAdmin),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
