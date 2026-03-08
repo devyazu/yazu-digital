@@ -1,38 +1,78 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserTier } from '../types';
-import { X, Check, Zap, ArrowRight, ShieldCheck, Crown } from 'lucide-react';
+import { X, Check, Zap, ArrowRight, ShieldCheck, Crown, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetTier: 'pro' | 'premium';
   currentTier: UserTier;
+  /** Called after in-place upgrade (no redirect); use to refresh profile. */
+  onSuccess?: () => void;
 }
 
-const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, targetTier, currentTier }) => {
+const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, targetTier, currentTier, onSuccess }) => {
+  const { session } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
-  // Prorated Logic Simulation
+  // Prorated Logic Simulation (Stripe applies real proration)
   const daysInMonth = 30;
   const daysLeft = 14;
   
   const currentPrice = currentTier === 'free' ? 0 : currentTier === 'basic' ? 4.99 : currentTier === 'pro' ? 19.99 : 29.99;
   const newPrice = targetTier === 'premium' ? 29.99 : 19.99;
   
-  // Calculate unused value of current plan
   const dailyRateCurrent = currentPrice / daysInMonth;
   const unusedValue = dailyRateCurrent * daysLeft;
-  
-  // Calculate cost of new plan for remainder of month
   const dailyRateNew = newPrice / daysInMonth;
   const newPlanCostForRemainder = dailyRateNew * daysLeft;
-  
-  // Amount to pay now = New Cost Remainder - Unused Value
   const payNow = Math.max(0, newPlanCostForRemainder - unusedValue).toFixed(2);
 
   const features = targetTier === 'premium' 
     ? ['Unlimited AI Generations', 'All 100+ Tools Unlocked', 'Priority Support', 'Unlimited Brand Workspaces']
     : ['50+ Pro Tools', '5 Brand Workspaces', 'Faster Processing', 'Sales Intelligence Tools'];
+
+  const handleUpgrade = async () => {
+    if (!session?.access_token) {
+      setError('Please sign in to upgrade.');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const base = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
+      const res = await fetch(`${base}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ targetTier }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || `Request failed (${res.status})`);
+        setLoading(false);
+        return;
+      }
+      if (data.updated) {
+        onSuccess?.();
+        onClose();
+        if (data.url) window.location.href = data.url;
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setError('No checkout URL received.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -94,9 +134,17 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, targetTier
                 ))}
             </div>
 
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-lg p-2 mb-4" role="alert">{error}</p>
+            )}
+
             {/* Action Button */}
-            <button className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 ${targetTier === 'premium' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-brand-600 hover:bg-brand-700'}`}>
-                Upgrade Instantly <ArrowRight className="w-4 h-4" />
+            <button
+              onClick={handleUpgrade}
+              disabled={loading}
+              className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none ${targetTier === 'premium' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-brand-600 hover:bg-brand-700'}`}
+            >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Upgrade Instantly <ArrowRight className="w-4 h-4" /></>}
             </button>
             
             <p className="text-center text-[10px] text-stone-400 mt-4 flex items-center justify-center gap-1">

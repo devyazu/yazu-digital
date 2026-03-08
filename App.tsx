@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
@@ -96,12 +96,30 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
 
   // Profile (avatar sync: Header + Settings, persists on refresh)
   const [profile, setProfile] = useState<Profile | null>(null);
-  useEffect(() => {
-    if (!authUser) return;
+  const refetchProfile = useCallback(() => {
+    if (!authUser?.id) return;
     getProfile(authUser.id)
       .then(({ profile: p }) => setProfile(p ?? null))
       .catch(() => setProfile(null));
   }, [authUser?.id]);
+  useEffect(() => {
+    if (!authUser) return;
+    refetchProfile();
+  }, [authUser?.id, refetchProfile]);
+
+  // After Stripe checkout success or billing update, refetch profile and clean URL
+  useEffect(() => {
+    if (!authUser?.id || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success' || params.get('billing') === 'updated') {
+      refetchProfile();
+      params.delete('checkout');
+      params.delete('billing');
+      if (params.get('session_id')) params.delete('session_id');
+      const next = params.toString() ? `?${params.toString()}` : window.location.pathname || '/';
+      window.history.replaceState({}, '', next);
+    }
+  }, [authUser?.id, refetchProfile]);
 
   // Favorites: load after first paint so initial render never depends on it
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -431,6 +449,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           onClose={() => setIsUpgradeModalOpen(false)}
           targetTier={targetUpgradeTier}
           currentTier={(userProfile ?? DEFAULT_USER_PROFILE).tier}
+          onSuccess={refetchProfile}
         />
       )}
     </div>

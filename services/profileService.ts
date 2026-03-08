@@ -18,6 +18,12 @@ export interface Profile {
   max_brands: number;
   /** Ordered list of favorite tool IDs for sidebar */
   favorite_tool_ids?: string[];
+  /** Billing: set by Stripe webhook only */
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  subscription_status?: string | null;
+  current_period_end?: string | null;
+  stripe_price_id?: string | null;
 }
 
 const CONFIRM_DEADLINE_HOURS = 3;
@@ -32,7 +38,7 @@ export async function getProfile(userId: string): Promise<{ profile: Profile | n
     if (!supabase) return { profile: null, error: new Error('Supabase not configured') };
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands')
+      .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands, stripe_customer_id, stripe_subscription_id, subscription_status, current_period_end, stripe_price_id')
       .eq('id', userId)
       .maybeSingle();
     const profile = data as Profile | null;
