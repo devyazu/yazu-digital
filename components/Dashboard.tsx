@@ -1,13 +1,5 @@
 import React from 'react';
 import { Category, Tool, UserTier, ToolAccessLevel, userTierCanAccessTool } from '../types';
-import { 
-  Search, Lock, Zap, ArrowRight, Sparkles, PlayCircle, BarChart3, Target, Crown, Gem, Layout,
-  ChevronDown, ChevronRight, LayoutGrid, BrainCircuit, MousePointerClick, TrendingUp, 
-  TrendingDown, DollarSign, Eye, ShoppingCart, Palette, Box, Swords, ShoppingBag, Mail, Globe, PenTool, Plus,
-  Video, Image, Users, Repeat, Megaphone, Shield, Heart, Star, History, Code, Tag, Truck, Store, ShieldCheck,
-  Bot, LifeBuoy, MapPin, Gamepad2, Briefcase, Facebook, Music, Camera, Shirt, Disc, Film, Edit3, Lock as LockIcon, MessageSquare,
-  Gift, Book, Clipboard, Hash, Layers, GitMerge, Grid, Map, Bell, Sticker
-} from 'lucide-react';
 
 interface DashboardProps {
   categories: Category[];
@@ -18,66 +10,10 @@ interface DashboardProps {
   onSearchChange?: (value: string) => void;
 }
 
-const getIcon = (name: string, className?: string) => {
-  const props = { className: className || "w-4 h-4" };
-  switch (name) {
-    case 'Zap': return <Zap {...props} />;
-    case 'Palette': return <Palette {...props} />;
-    case 'Box': return <Box {...props} />;
-    case 'Swords': return <Swords {...props} />;
-    case 'BrainCircuit': return <BrainCircuit {...props} />;
-    case 'Target': return <Target {...props} />;
-    case 'MousePointerClick': return <MousePointerClick {...props} />;
-    case 'TrendingUp': return <TrendingUp {...props} />;
-    case 'TrendingDown': return <TrendingDown {...props} />;
-    case 'DollarSign': return <DollarSign {...props} />;
-    case 'Eye': return <Eye {...props} />;
-    case 'ShoppingCart': return <ShoppingCart {...props} />;
-    case 'Mail': return <Mail {...props} />;
-    case 'Globe': return <Globe {...props} />;
-    case 'Sparkles': return <Sparkles {...props} />;
-    case 'PenTool': return <PenTool {...props} />;
-    case 'ShoppingBag': return <ShoppingBag {...props} />;
-    case 'Video': return <Video {...props} />;
-    case 'Image': return <Image {...props} />;
-    case 'Users': return <Users {...props} />;
-    case 'Repeat': return <Repeat {...props} />;
-    case 'Megaphone': return <Megaphone {...props} />;
-    case 'Shield': return <Shield {...props} />;
-    case 'Search': return <Search {...props} />;
-    case 'Heart': return <Heart {...props} />;
-    case 'PlayCircle': return <PlayCircle {...props} />;
-    case 'Code': return <Code {...props} />; 
-    case 'Store': return <Store {...props} />; 
-    case 'Truck': return <Truck {...props} />; 
-    case 'Tag': return <Tag {...props} />; 
-    case 'MapPin': return <MapPin {...props} />; 
-    case 'Gamepad2': return <Gamepad2 {...props} />; 
-    case 'Briefcase': return <Briefcase {...props} />; 
-    case 'Facebook': return <Facebook {...props} />; 
-    case 'Music': return <Music {...props} />; 
-    case 'Gem': return <Gem {...props} />; 
-    case 'Camera': return <Camera {...props} />;
-    case 'Shirt': return <Shirt {...props} />;
-    case 'Disc': return <Disc {...props} />;
-    case 'Film': return <Film {...props} />;
-    case 'Edit3': return <Edit3 {...props} />;
-    case 'Lock': return <LockIcon {...props} />;
-    case 'MessageSquare': return <MessageSquare {...props} />;
-    case 'Gift': return <Gift {...props} />;
-    case 'Book': return <Book {...props} />;
-    case 'Clipboard': return <Clipboard {...props} />;
-    case 'Hash': return <Hash {...props} />;
-    case 'Layers': return <Layers {...props} />;
-    case 'GitMerge': return <GitMerge {...props} />;
-    case 'Grid': return <Grid {...props} />;
-    case 'Map': return <Map {...props} />;
-    case 'Bell': return <Bell {...props} />;
-    case 'Sticker': return <Sticker {...props} />;
-    case 'Layout': return <Layout {...props} />;
-    default: return <LayoutGrid {...props} />;
-  }
-};
+/** Safe icon placeholder (no lucide) to avoid minification "X is not a constructor" in production. */
+const getIcon = (name: string, className?: string) => (
+  <span className={className || 'w-4 h-4'} aria-hidden>◆</span>
+);
 
 const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelectCategory, userTier, searchQuery, onSearchChange }) => {
   
@@ -136,13 +72,13 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
         <div className="flex-[0.6] p-6 flex flex-col justify-between relative z-10">
           <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className={`p-1.5 rounded-md ${tool.type === 'hype' ? 'bg-purple-100/50 text-purple-600' : 'bg-green-100/50 text-green-600'}`}>
-                  {tool.type === 'hype' ? <PlayCircle size={14} /> : <BarChart3 size={14} />}
+                <div className={`p-1.5 rounded-md text-sm ${tool.type === 'hype' ? 'bg-purple-100/50 text-purple-600' : 'bg-green-100/50 text-green-600'}`}>
+                  <span aria-hidden>{tool.type === 'hype' ? '▶' : '▣'}</span>
                 </div>
                 {/* Access Badge */}
                 {tool.accessLevel !== 'basic' && (
                   <span className={`${getTierColor(tool.accessLevel)} text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm`}>
-                    {locked && <Lock className="w-2.5 h-2.5" />}
+                    {locked && <span className="opacity-90" aria-hidden>🔒</span>}
                     {tool.accessLevel}
                   </span>
                 )}
@@ -156,7 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
           </div>
           
           <div className={`flex items-center gap-1 text-xs font-bold transition-colors mt-2 ${locked ? 'text-stone-300' : 'text-stone-400 group-hover:text-brand-600'}`}>
-            {locked ? 'Upgrade to Unlock' : 'Launch Tool'} <ArrowRight size={12} className={!locked ? "group-hover:translate-x-1 transition-transform" : ""} />
+            {locked ? 'Upgrade to Unlock' : 'Launch Tool'} <span className={!locked ? "group-hover:translate-x-1 transition-transform inline-block" : ""} aria-hidden>→</span>
           </div>
         </div>
 
@@ -218,7 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
               onChange={(e) => onSearchChange?.(e.target.value)}
               className="relative w-full py-4 pl-12 pr-4 bg-white/90 backdrop-blur-md rounded-full text-stone-800 placeholder-stone-400 focus:outline-none focus:bg-white shadow-lg border border-white/40 transition-all"
             />
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5 z-20" />
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5 z-20 pointer-events-none" aria-hidden>⌕</span>
           </div>
         </div>
       </div>
@@ -234,7 +170,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
       <div className="space-y-12">
         {categories.length === 0 ? (
           <div className="text-center py-16 text-stone-500">
-            <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <span className="text-3xl mx-auto mb-4 opacity-50 block" aria-hidden>⌕</span>
             <p className="font-medium">Bu arama ile eşleşen araç yok.</p>
             <p className="text-sm mt-1">Farklı bir anahtar kelime deneyin.</p>
           </div>
@@ -249,7 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
                 onClick={() => onSelectCategory(cat)}
                 className="text-sm text-brand-600 font-medium hover:text-brand-700 flex items-center gap-1 transition-all hover:gap-2 px-3 py-1 rounded-lg hover:bg-brand-50/50"
               >
-                View all <ArrowRight className="w-4 h-4" />
+                View all <span className="inline-block" aria-hidden>→</span>
               </button>
             </div>
             
