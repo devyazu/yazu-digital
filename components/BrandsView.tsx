@@ -95,7 +95,7 @@ const BrandsView: React.FC<BrandsViewProps> = ({ brands, user, onSelectBrand, on
                       title={onUpdateBrandLogo ? 'Change logo' : undefined}
                     >
                         <img 
-                            src={brand.logoUrl || "/yazu.svg"} 
+                            src={brand.logoUrl || "/your-logo.png"} 
                             alt={brand.name} 
                             className="w-full h-full object-cover"
                         />

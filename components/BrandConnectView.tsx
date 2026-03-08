@@ -70,7 +70,7 @@ const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack }) =>
         
         <div className="flex items-center gap-6 mb-8">
            <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-lg border border-stone-200">
-             <img src={brand.logoUrl || "/yazu.svg"} alt="Logo" className="w-full h-full object-cover" />
+             <img src={brand.logoUrl || "/your-logo.png"} alt="Logo" className="w-full h-full object-cover" />
            </div>
            <div>
               <h1 className="text-3xl font-bold text-stone-800 mb-1">{brand.name} Operating System</h1>

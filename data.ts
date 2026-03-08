@@ -40,7 +40,7 @@ export const MOCK_BRANDS: Brand[] = [
     id: 'brand-1',
     name: 'Urban Sneakers Co.',
     website: 'urbansneakers.demo',
-    logoUrl: '/yazu.svg',
+    logoUrl: '/your-logo.png',
     salesAgentConfig: {
       isActive: true,
       name: "Alex (Sales Guide)",
@@ -67,7 +67,7 @@ export const MOCK_BRANDS: Brand[] = [
     id: 'brand-2',
     name: 'Cosmic Coffee',
     website: 'cosmic.coffee',
-    logoUrl: '/yazu.svg',
+    logoUrl: '/your-logo.png',
     salesAgentConfig: {
       isActive: false,
       name: "Barista Bot",
