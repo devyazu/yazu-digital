@@ -313,11 +313,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                           <span className="truncate min-w-0">{tool.name}</span>
                           {/* Access Level Badge - always visible */}
                           {tool.accessLevel !== 'basic' && (
-                             <span className="shrink-0" title={tool.accessLevel === 'premium' ? 'Premium Tool' : 'Pro Tool'}>
+                             <span className="shrink-0 text-xs" title={tool.accessLevel === 'premium' ? 'Premium Tool' : 'Pro Tool'} aria-hidden>
                                {tool.accessLevel === 'premium' ? (
-                                 <Gem size={12} className="text-purple-600 fill-purple-100" />
+                                 <span className="text-purple-600">💎</span>
                                ) : (
-                                 <Crown size={12} className="text-brand-600 fill-brand-100" />
+                                 <span className="text-brand-600">◆</span>
                                )}
                              </span>
                           )}
