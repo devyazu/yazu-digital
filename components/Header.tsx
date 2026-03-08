@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Search, Zap, ChevronDown, Briefcase, Plus, Settings, Bell } from 'lucide-react';
 import { UserProfile, Brand } from '../types';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80';
@@ -60,9 +59,10 @@ const Header: React.FC<HeaderProps> = ({
         {/* Mobile: menu toggle */}
         <button 
           onClick={onToggleSidebar}
-          className="p-2 -ml-2 text-stone-500 hover:bg-white/50 rounded-md lg:hidden"
+          className="p-2 -ml-2 text-stone-500 hover:bg-white/50 rounded-md lg:hidden text-xl leading-none"
+          aria-label="Open menu"
         >
-          <Menu className="w-6 h-6" />
+          <span aria-hidden>☰</span>
         </button>
         
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.location.reload()} title="Yazu">
@@ -73,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({
       {/* Center: Search (Hidden on Mobile) */}
       <div className="flex-1 max-w-xl mx-4 hidden md:block">
         <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-hover:text-brand-500 transition-colors" />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-hover:text-brand-500 transition-colors pointer-events-none" aria-hidden>⌕</span>
           <input 
             type="text" 
             placeholder="Search tools (e.g. Viral, TikTok, SEO)..." 
@@ -90,7 +90,7 @@ const Header: React.FC<HeaderProps> = ({
         {/* Credit System */}
         <div className="hidden xl:flex flex-col items-end mr-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-stone-600 mb-1">
-            <Zap className="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
+            <span className="text-brand-500" aria-hidden>⚡</span>
             <span>{user.credits.total - user.credits.used} Credits</span>
           </div>
           <div className="w-24 h-1.5 bg-stone-200/50 rounded-full overflow-hidden">
@@ -114,17 +114,17 @@ const Header: React.FC<HeaderProps> = ({
                 {currentBrand.logoUrl ? (
                   <img src={currentBrand.logoUrl} alt="Logo" className="w-5 h-5 rounded-full object-cover" />
                 ) : (
-                  <Briefcase className="w-4 h-4 text-brand-600" />
+                  <span className="w-4 h-4 inline-block text-brand-600 text-center text-sm" aria-hidden>⌂</span>
                 )}
                 <span className="max-w-[100px] truncate">{currentBrand.name}</span>
               </>
             ) : (
               <>
-                <Briefcase className="w-4 h-4 text-brand-600" />
+                <span className="w-4 h-4 inline-block text-brand-600 text-center text-sm" aria-hidden>⌂</span>
                 <span className="max-w-[100px] truncate">Select brand</span>
               </>
             )}
-            <ChevronDown className="w-3 h-3 text-stone-400" />
+            <span className="w-3 h-3 inline-block text-stone-400 text-xs leading-none" aria-hidden>▼</span>
           </button>
 
           {isBrandMenuOpen && (
@@ -162,16 +162,16 @@ const Header: React.FC<HeaderProps> = ({
                    }}
                    className="w-full text-left px-4 py-3 text-sm text-stone-600 hover:bg-stone-50/50 hover:text-brand-600 flex items-center gap-2"
                 >
-                  <Settings className="w-4 h-4" /> Manage All Brands
+                  <span className="text-stone-500" aria-hidden>⚙</span> Manage All Brands
                 </button>
                 <button 
                    onClick={() => {
-                     onNavigate('brands-list'); // In reality, trigger add modal
+                     onNavigate('brands-list');
                      setIsBrandMenuOpen(false);
                    }}
                    className="w-full text-left px-4 py-3 text-sm text-brand-600 hover:bg-brand-50/50 font-medium flex items-center gap-2"
                 >
-                  <Plus className="w-4 h-4" /> Add New Brand
+                  <span aria-hidden>+</span> Add New Brand
                 </button>
               </div>
             </div>
@@ -187,8 +187,9 @@ const Header: React.FC<HeaderProps> = ({
             onClick={onOpenNotifications}
             className="relative p-2 text-stone-500 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors"
             title={unreadNotificationCount > 0 ? `${unreadNotificationCount} unread notification(s)` : 'Notifications'}
+            aria-label="Notifications"
           >
-            <Bell className="w-4 h-4" />
+            <span className="w-4 h-4 inline-block text-center text-sm" aria-hidden>🔔</span>
             {unreadNotificationCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-brand-500 text-white text-[10px] font-bold px-1">
                 {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
