@@ -28,7 +28,7 @@ export async function getProfile(userId: string): Promise<{ profile: Profile | n
   if (!supabase) return { profile: null, error: new Error('Supabase not configured') };
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands, favorite_tool_ids')
+    .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands')
     .eq('id', userId)
     .maybeSingle();
   const profile = data as Profile | null;
@@ -39,10 +39,21 @@ export async function getProfile(userId: string): Promise<{ profile: Profile | n
       profile.credits_used = profile.credits_used ?? 0;
       profile.max_brands = profile.max_brands ?? 1;
     }
-    const raw = (data as { favorite_tool_ids?: unknown })?.favorite_tool_ids;
-    profile.favorite_tool_ids = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
   }
   return { profile, error: error ?? null };
+}
+
+/** Load only favorite_tool_ids so profile fetch never fails if column is missing. Returns [] on error or missing column. */
+export async function getFavoriteToolIds(userId: string): Promise<string[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('favorite_tool_ids')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error || data == null) return [];
+  const raw = (data as { favorite_tool_ids?: unknown })?.favorite_tool_ids;
+  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
 }
 
 export interface ProfileUpdate {
@@ -66,6 +77,14 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
     .update(updates)
     .eq('id', userId);
   return { error: error ?? null };
+}
+
+/** Update only favorite_tool_ids. No-op if column does not exist (safe before migration). */
+export async function updateFavoriteToolIds(userId: string, ids: string[]): Promise<void> {
+  const { error } = await updateProfile(userId, { favorite_tool_ids: ids });
+  if (error) {
+    console.warn('updateFavoriteToolIds failed (run migration 013 if needed):', error.message);
+  }
 }
 
 export async function uploadAvatar(userId: string, file: File): Promise<{ url: string | null; error: Error | null }> {

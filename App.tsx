@@ -20,7 +20,7 @@ import NotificationsPanel from './components/NotificationsPanel';
 import { CATEGORIES as INITIAL_CATEGORIES } from './data';
 import { Tool, Brand, Category, SalesAgentConfig, UserProfile, userTierCanAccessTool, TIER_DEFAULTS } from './types';
 import { getBrands, createBrand, uploadBrandLogo } from './services/brandService';
-import { getProfile, updateProfile, type Profile } from './services/profileService';
+import { getProfile, getFavoriteToolIds, updateFavoriteToolIds, type Profile } from './services/profileService';
 import { getUnreadNotificationCount } from './services/notificationsService';
 
 function filterCategoriesBySearch(categories: Category[], query: string): Category[] {
@@ -95,12 +95,12 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     getProfile(authUser.id).then(({ profile: p }) => setProfile(p ?? null));
   }, [authUser?.id]);
 
-  // Favorites: load from profile once, persist on toggle/reorder
+  // Favorites: load separately so missing DB column never breaks profile
   const [favorites, setFavorites] = useState<string[]>([]);
   useEffect(() => {
-    if (!profile?.id || !Array.isArray(profile.favorite_tool_ids)) return;
-    setFavorites(profile.favorite_tool_ids);
-  }, [profile?.id]);
+    if (!authUser?.id) return;
+    getFavoriteToolIds(authUser.id).then((ids) => setFavorites(Array.isArray(ids) ? ids : []));
+  }, [authUser?.id]);
 
   const userProfile: UserProfile | null = useMemo(() => {
     if (!authUser) return null;
@@ -161,8 +161,12 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
 
   const persistFavorites = (next: string[]) => {
     if (!authUser?.id) return;
-    setFavorites(next);
-    updateProfile(authUser.id, { favorite_tool_ids: next }).catch(() => {});
+    try {
+      setFavorites(next);
+      updateFavoriteToolIds(authUser.id, next);
+    } catch (e) {
+      console.warn('persistFavorites', e);
+    }
   };
 
   const handleToggleFavorite = (toolId: string) => {

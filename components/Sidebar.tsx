@@ -261,9 +261,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const getFavoriteTools = (): Tool[] => {
-    const allTools = categories.flatMap(c => c.tools);
-    const byId = new Map(allTools.map(t => [t.id, t]));
-    return favorites.map(id => byId.get(id)).filter((t): t is Tool => t != null);
+    const allTools = (categories ?? []).flatMap((c) => (c.tools ?? []));
+    const byId = new Map(allTools.map((t) => [t.id, t]));
+    return (favorites ?? []).map((id) => byId.get(id)).filter((t): t is Tool => t != null);
   };
 
   // Mini sidebar: visible only on desktop when main sidebar is closed
