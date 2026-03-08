@@ -6,8 +6,8 @@
  */
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import requireAuth from './lib/requireAuth.js';
-import { getPriceIdForTier } from './lib/stripeConfig.js';
+import requireAuth from '../server-lib/requireAuth.js';
+import { getPriceIdForTier } from '../server-lib/stripeConfig.js';
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;

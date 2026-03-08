@@ -2,8 +2,8 @@
  * Admin: E-posta şablonları listele (GET) ve güncelle (PUT).
  * Authorization: Bearer <admin JWT>
  */
-import requireAdmin from '../lib/adminAuth.js';
-import { stripDataUrlsFromHtml } from '../lib/emailHelpers.js';
+import requireAdmin from '../../server-lib/adminAuth.js';
+import { stripDataUrlsFromHtml } from '../../server-lib/emailHelpers.js';
 
 function send(res, status, body) {
   if (typeof res?.setHeader === 'function') res.setHeader('Content-Type', 'application/json');

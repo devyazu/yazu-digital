@@ -3,7 +3,7 @@
  * Ürünler veritabanında tutulur; oluşturma/güncellemede Stripe'da Product/Price oluşturulur/güncellenir.
  */
 import Stripe from 'stripe';
-import requireAdmin from '../lib/adminAuth.js';
+import requireAdmin from '../../server-lib/adminAuth.js';
 
 const VALID_TIERS = ['basic', 'pro', 'premium'];
 

@@ -2,7 +2,7 @@
  * Admin: List notifications (GET), Create notification (POST).
  * Authorization: Bearer <admin JWT>
  */
-import requireAdmin from '../lib/adminAuth.js';
+import requireAdmin from '../../server-lib/adminAuth.js';
 
 function send(res, status, body) {
   if (typeof res?.setHeader === 'function') res.setHeader('Content-Type', 'application/json');

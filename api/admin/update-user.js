@@ -2,7 +2,7 @@
  * Admin: Update a user's profile (tier, credits, name, etc.) and optionally is_admin.
  * PATCH body: user_id, full_name?, first_name?, last_name?, company_name?, job_title?, tier?, credits_total?, credits_used?, max_brands?, is_admin?
  */
-import requireAdmin from '../lib/adminAuth.js';
+import requireAdmin from '../../server-lib/adminAuth.js';
 
 const VALID_TIERS = ['free', 'basic', 'pro', 'premium', 'enterprise'];
 

@@ -6,7 +6,7 @@
 import { buffer } from 'micro';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { tierFromPriceId, TIER_DEFAULTS } from './lib/stripeConfig.js';
+import { tierFromPriceId, TIER_DEFAULTS } from '../server-lib/stripeConfig.js';
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
