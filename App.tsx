@@ -13,6 +13,7 @@ import CategoryView from './components/CategoryView';
 import UpgradeModal from './components/UpgradeModal';
 import AdminGate from './components/AdminGate';
 import EmailConfirmGate from './components/EmailConfirmGate';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import SalesAgentView from './components/SalesAgentView';
 import LoginPage from './components/LoginPage';
 import ChatArchiveView from './components/ChatArchiveView';
@@ -275,6 +276,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   // #endregion
   return (
     <EmailConfirmGate userId={authUser.id} onSignOut={onLogout}>
+    <AppErrorBoundary>
     <div className="min-h-screen bg-[#F2F2F0] flex flex-col font-sans text-stone-800 relative selection:bg-brand-200 selection:text-brand-900">
       
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -432,6 +434,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         />
       )}
     </div>
+    </AppErrorBoundary>
     </EmailConfirmGate>
   );
 }
