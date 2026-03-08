@@ -265,7 +265,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           return (
             <div className="animate-in fade-in slide-in-from-top-2">
               <h2 className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2 mb-2 px-2">
-                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                <span className="w-3.5 h-3.5 inline-block text-yellow-500" aria-hidden>★</span>
                 Favorites
               </h2>
               <div className="space-y-1">
@@ -299,10 +299,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onToggleFavorite(tool.id); }}
-                      className="shrink-0 p-1 hover:bg-stone-200 rounded-full cursor-pointer"
+                      className="shrink-0 p-1 hover:bg-stone-200 rounded-full cursor-pointer text-yellow-500"
                       title="Remove from favorites"
+                      aria-label="Remove from favorites"
                     >
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                      <span aria-hidden>★</span>
                     </button>
                   </div>
                 ))}
