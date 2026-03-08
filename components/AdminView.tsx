@@ -36,7 +36,7 @@ interface AdminViewProps {
 
 const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit }) => {
   const { session } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail' | 'notifications' | 'billing'>('tools');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tools' | 'categories' | 'analytics' | 'mail' | 'notifications' | 'packages'>('tools');
   const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS_LIST);
   // Email templates
   const [emailTemplates, setEmailTemplates] = useState<Array<{ id: string; slug: string; name: string; description: string | null; subject: string; body_html: string; body_json: string | null; from_name: string | null; recipient_type: string; is_active: boolean; updated_at: string }>>([]);
@@ -147,7 +147,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   }, [activeTab, session?.access_token]);
 
   useEffect(() => {
-    if (activeTab !== 'billing' || !session?.access_token) return;
+    if (activeTab !== 'packages' || !session?.access_token) return;
     setSubscriptionProductsLoading(true);
     setSubscriptionProductsError(null);
     fetch('/api/admin/subscription-products', { headers: { Authorization: `Bearer ${session.access_token}` } })
@@ -784,7 +784,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     </div>
   );
 
-  const renderBilling = () => {
+  const renderPackages = () => {
     const handleCreateProduct = () => {
       const name = subscriptionProductForm.name.trim();
       const slug = subscriptionProductForm.slug.trim() || name.toLowerCase().replace(/\s+/g, '-');
@@ -911,8 +911,8 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                 <input value={editSubscriptionProductForm.currency} onChange={(e) => setEditSubscriptionProductForm((f) => ({ ...f, currency: e.target.value }))} className="w-full px-3 py-2 border border-stone-200 rounded-lg" />
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="billing-active" checked={editSubscriptionProductForm.is_active} onChange={(e) => setEditSubscriptionProductForm((f) => ({ ...f, is_active: e.target.checked }))} />
-                <label htmlFor="billing-active" className="text-sm text-stone-700">Active (use in listing)</label>
+                <input type="checkbox" id="packages-active" checked={editSubscriptionProductForm.is_active} onChange={(e) => setEditSubscriptionProductForm((f) => ({ ...f, is_active: e.target.checked }))} />
+                <label htmlFor="packages-active" className="text-sm text-stone-700">Active (use in listing)</label>
               </div>
             </div>
             <div className="flex gap-2">
@@ -1438,10 +1438,10 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                 <Bell className="w-4 h-4" /> Notifications
               </button>
               <button
-                onClick={() => setActiveTab('billing')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'billing' ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100'}`}
+                onClick={() => setActiveTab('packages')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'packages' ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100'}`}
               >
-                <DollarSign className="w-4 h-4" /> Billing
+                <DollarSign className="w-4 h-4" /> Packages
               </button>
             </nav>
             <div className="mt-auto p-6 border-t border-stone-200">
@@ -1452,14 +1452,14 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
 
          {/* Content */}
          <div className="flex-1 overflow-y-auto p-8">
-            <h1 className="text-2xl font-bold text-stone-800 mb-6 capitalize">{activeTab === 'billing' ? 'Billing' : activeTab} Overview</h1>
+            <h1 className="text-2xl font-bold text-stone-800 mb-6 capitalize">{activeTab === 'packages' ? 'Packages' : activeTab} Overview</h1>
             {activeTab === 'analytics' && renderDeepAnalytics()}
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'tools' && renderTools()}
             {activeTab === 'categories' && renderCategories()}
             {activeTab === 'mail' && renderMail()}
             {activeTab === 'notifications' && renderNotifications()}
-            {activeTab === 'billing' && renderBilling()}
+            {activeTab === 'packages' && renderPackages()}
          </div>
       </div>
     </div>

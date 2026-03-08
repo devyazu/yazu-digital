@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Loader2, Zap, Crown, ArrowRight, Check } from 'lucide-react';
 
 type Step = 'landing' | 'plans' | 'signup';
+type PlanTier = 'basic' | 'pro' | 'premium';
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  slug: string;
+  tier: PlanTier;
+  price_amount_cents: number;
+  currency: string;
+  sort_order: number;
+}
 
 interface StartLandingPageProps {
   onSignUp: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -11,11 +22,22 @@ interface StartLandingPageProps {
 
 const StartLandingPage: React.FC<StartLandingPageProps> = ({ onSignUp, onSignIn, isConfigured }) => {
   const [step, setStep] = useState<Step>('landing');
-  const [selectedPlan, setSelectedPlan] = useState<'pro' | 'premium' | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PlanTier | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+
+  useEffect(() => {
+    const base = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
+    fetch(`${base}/api/plans`)
+      .then((r) => r.json())
+      .then((data) => setPlans(Array.isArray(data?.plans) ? data.plans : []))
+      .catch(() => setPlans([]))
+      .finally(() => setPlansLoading(false));
+  }, []);
 
   const handleCreateAccount = () => {
     setSelectedPlan(null);
@@ -28,11 +50,18 @@ const StartLandingPage: React.FC<StartLandingPageProps> = ({ onSignUp, onSignIn,
     setMessage(null);
   };
 
-  const handleSelectPlan = (plan: 'pro' | 'premium') => {
-    if (typeof window !== 'undefined') window.sessionStorage.setItem('start_plan', plan);
-    setSelectedPlan(plan);
+  const handleSelectPlan = (tier: PlanTier) => {
+    if (typeof window !== 'undefined') window.sessionStorage.setItem('start_plan', tier);
+    setSelectedPlan(tier);
     setStep('signup');
     setMessage(null);
+  };
+
+  const formatPrice = (cents: number, currency: string) => {
+    const value = cents / 100;
+    if (currency?.toLowerCase() === 'usd') return `$${value.toFixed(2)}`;
+    if (currency?.toLowerCase() === 'eur') return `€${value.toFixed(2)}`;
+    return `${value.toFixed(2)} ${(currency || 'USD').toUpperCase()}`;
   };
 
   const handleSignUpSubmit = async (e: React.FormEvent) => {
@@ -79,30 +108,66 @@ const StartLandingPage: React.FC<StartLandingPageProps> = ({ onSignUp, onSignIn,
         </div>
 
         {step === 'landing' && (
-          <div className="bg-white rounded-2xl shadow-xl border border-stone-200 p-8 text-center">
-            <h1 className="text-2xl font-bold text-stone-800 mb-2">Get started</h1>
-            <p className="text-stone-500 text-sm mb-8">
-              Create an account or pick a plan and sign up to go straight to checkout.
-            </p>
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={handleCreateAccount}
-                className="w-full py-3 px-4 rounded-xl font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 border border-stone-200 transition-colors"
-              >
-                Create account
-              </button>
-              <button
-                type="button"
-                onClick={handleChoosePlan}
-                className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-brand-600 hover:bg-brand-700 flex items-center justify-center gap-2 transition-colors"
-              >
-                Choose a plan <ArrowRight className="w-4 h-4" />
-              </button>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-xl border border-stone-200 p-8 text-center">
+              <h1 className="text-2xl font-bold text-stone-800 mb-2">Get started</h1>
+              <p className="text-stone-500 text-sm mb-6">
+                Create an account or pick a plan and sign up to go straight to checkout.
+              </p>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={handleCreateAccount}
+                  className="w-full py-3 px-4 rounded-xl font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 border border-stone-200 transition-colors"
+                >
+                  Create account
+                </button>
+                {plans.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleChoosePlan}
+                    className="w-full py-3 px-4 rounded-xl font-semibold text-white bg-brand-600 hover:bg-brand-700 flex items-center justify-center gap-2 transition-colors"
+                  >
+                    Choose a plan <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
-            <p className="text-xs text-stone-400 mt-6">
-              Test mode: use card 4242 4242 4242 4242. No real charges.
-            </p>
+
+            {plans.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-xl border border-stone-200 p-6">
+                <h2 className="text-lg font-bold text-stone-800 mb-4 text-center">Plans</h2>
+                {plansLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {plans.map((plan) => (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => handleSelectPlan(plan.tier)}
+                        className="text-left rounded-2xl border-2 border-stone-200 p-5 hover:border-brand-400 hover:shadow-md transition-all"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center mb-3">
+                          {plan.tier === 'premium' ? <Crown className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                        </div>
+                        <h3 className="font-bold text-stone-800">{plan.name}</h3>
+                        <p className="text-sm text-stone-500 mt-1 capitalize">{plan.tier}</p>
+                        <p className="mt-3 text-stone-600 font-semibold">
+                          {formatPrice(plan.price_amount_cents, plan.currency)} / month
+                        </p>
+                        <span className="text-brand-600 font-bold text-sm mt-2 inline-block">Get this plan →</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-stone-400 mt-4 text-center">
+                  Test mode: use card 4242 4242 4242 4242. No real charges.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -116,30 +181,24 @@ const StartLandingPage: React.FC<StartLandingPageProps> = ({ onSignUp, onSignIn,
               ← Back
             </button>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div
-                className="bg-white rounded-2xl border-2 border-stone-200 p-6 cursor-pointer hover:border-brand-400 hover:shadow-md transition-all"
-                onClick={() => handleSelectPlan('pro')}
-              >
-                <div className="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center mb-3">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <h3 className="font-bold text-stone-800">Pro</h3>
-                <p className="text-sm text-stone-500 mt-1">More tools, more brands.</p>
-                <p className="mt-3 text-stone-600 font-semibold">Monthly</p>
-                <span className="text-brand-600 font-bold">Get Pro →</span>
-              </div>
-              <div
-                className="bg-white rounded-2xl border-2 border-stone-200 p-6 cursor-pointer hover:border-brand-400 hover:shadow-md transition-all"
-                onClick={() => handleSelectPlan('premium')}
-              >
-                <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center mb-3">
-                  <Crown className="w-5 h-5" />
-                </div>
-                <h3 className="font-bold text-stone-800">Premium</h3>
-                <p className="text-sm text-stone-500 mt-1">All tools, priority support.</p>
-                <p className="mt-3 text-stone-600 font-semibold">Monthly</p>
-                <span className="text-purple-600 font-bold">Get Premium →</span>
-              </div>
+              {plans.map((plan) => (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => handleSelectPlan(plan.tier)}
+                  className="text-left bg-white rounded-2xl border-2 border-stone-200 p-6 hover:border-brand-400 hover:shadow-md transition-all"
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${plan.tier === 'premium' ? 'bg-purple-100 text-purple-600' : 'bg-brand-100 text-brand-600'}`}>
+                    {plan.tier === 'premium' ? <Crown className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                  </div>
+                  <h3 className="font-bold text-stone-800">{plan.name}</h3>
+                  <p className="text-sm text-stone-500 mt-1 capitalize">{plan.tier}</p>
+                  <p className="mt-3 text-stone-600 font-semibold">
+                    {formatPrice(plan.price_amount_cents, plan.currency)} / month
+                  </p>
+                  <span className={plan.tier === 'premium' ? 'text-purple-600 font-bold' : 'text-brand-600 font-bold'}>Get this plan →</span>
+                </button>
+              ))}
             </div>
             <p className="text-xs text-stone-400 text-center">
               Test mode: use card 4242 4242 4242 4242. No real charges.
@@ -152,7 +211,7 @@ const StartLandingPage: React.FC<StartLandingPageProps> = ({ onSignUp, onSignIn,
             {selectedPlan && (
               <p className="text-sm text-stone-600 mb-4 flex items-center gap-2">
                 <Check className="w-4 h-4 text-green-600" />
-                Plan: {selectedPlan === 'pro' ? 'Pro' : 'Premium'} — you’ll go to checkout after sign up.
+                Plan: {plans.find((p) => p.tier === selectedPlan)?.name ?? selectedPlan} — you’ll go to checkout after sign up.
               </p>
             )}
             <h2 className="text-xl font-bold text-stone-800 mb-1">Create account</h2>

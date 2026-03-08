@@ -87,7 +87,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   useEffect(() => {
     const plan = typeof window !== 'undefined' ? window.sessionStorage.getItem('start_plan') : null;
     if (!plan || plan === 'free' || !session?.access_token) return;
-    const targetTier = plan === 'premium' ? 'premium' : 'pro';
+    const targetTier = plan === 'premium' ? 'premium' : plan === 'basic' ? 'basic' : 'pro';
     const base = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
     fetch(`${base}/api/create-checkout-session`, {
       method: 'POST',
