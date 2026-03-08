@@ -15,6 +15,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      // Direct icon imports avoid "X is not a constructor" in production minification
+      'lucide-react/icons': path.resolve(__dirname, 'node_modules/lucide-react/dist/esm/icons'),
     },
   },
 });

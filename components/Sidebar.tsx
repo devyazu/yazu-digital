@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Tool, UserProfile } from '../types';
-
-/** Safe placeholder (no lucide) to avoid minification "X is not a constructor" in production. */
-const getIcon = (name: string, className?: string) => (
-  <span className={className || 'w-4 h-4'} aria-hidden>◆</span>
-);
+import { getIcon, PanelLeft, History, Bot, LogOut, Star, Crown, Gem, ChevronDown, ChevronRight, Plus } from '../lib/safeIcons';
 
 interface SidebarProps {
   categories: Category[];
@@ -116,29 +112,29 @@ const Sidebar: React.FC<SidebarProps> = ({
     <>
     {/* Mini icon bar when desktop sidebar is closed — scrollable, no scrollbar */}
     <aside className={miniSidebarClasses}>
-      <button onClick={onToggleDesktopSidebar} className="p-2.5 shrink-0 text-stone-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors text-lg leading-none" title="Open sidebar" aria-label="Open sidebar">
-        <span aria-hidden>☰</span>
+      <button onClick={onToggleDesktopSidebar} className="p-2.5 shrink-0 text-stone-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Open sidebar" aria-label="Open sidebar">
+        <PanelLeft className="w-5 h-5" />
       </button>
       <div
         className="flex-1 min-h-0 flex flex-col items-center gap-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        <button onClick={() => { onNavigate('history'); onToggleDesktopSidebar?.(); }} className="p-2.5 shrink-0 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700 text-lg" title="Chat Archive" aria-label="Chat Archive">
-          <span aria-hidden>🕐</span>
+        <button onClick={() => { onNavigate('history'); onToggleDesktopSidebar?.(); }} className="p-2.5 shrink-0 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="Chat Archive" aria-label="Chat Archive">
+          <History className="w-5 h-5" />
         </button>
         {categories.map((cat) => (
           <button key={`mini-${cat.id}`} onClick={() => { onSelectCategory(cat); onToggleDesktopSidebar?.(); }} className="p-2.5 shrink-0 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title={cat.name}>
             {getIcon(cat.iconName, 'w-5 h-5')}
           </button>
         ))}
-        <button onClick={() => { onNavigate('sales-agent'); onToggleDesktopSidebar?.(); }} className="p-2.5 shrink-0 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700 text-lg" title="AI Sales Agent" aria-label="AI Sales Agent">
-          <span aria-hidden>🤖</span>
+        <button onClick={() => { onNavigate('sales-agent'); onToggleDesktopSidebar?.(); }} className="p-2.5 shrink-0 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-700" title="AI Sales Agent" aria-label="AI Sales Agent">
+          <Bot className="w-5 h-5" />
         </button>
       </div>
       <div className="border-t border-stone-100 pt-2 flex flex-col items-center gap-1 shrink-0">
         {onLogout && (
-          <button onClick={onLogout} className="p-2.5 rounded-lg hover:bg-red-50 text-stone-500 hover:text-red-600 text-sm" title="Sign out" aria-label="Sign out">
-            <span aria-hidden>⎋</span>
+          <button onClick={onLogout} className="p-2.5 rounded-lg hover:bg-red-50 text-stone-500 hover:text-red-600" title="Sign out" aria-label="Sign out">
+            <LogOut className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -154,7 +150,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onNavigate('history')}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeView === 'history' ? 'bg-stone-800 text-white shadow-lg' : 'bg-white border border-stone-200 text-stone-600 hover:border-brand-300 hover:text-brand-600'}`}
         >
-          <span className="text-base" aria-hidden>🕐</span>
+          <History className="w-4 h-4" />
           <span>Chat Archive</span>
         </button>
 
@@ -193,7 +189,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           return (
             <div className="animate-in fade-in slide-in-from-top-2">
               <h2 className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2 mb-2 px-2">
-                <span className="w-3.5 h-3.5 inline-block text-yellow-500" aria-hidden>★</span>
+                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
                 Favorites
               </h2>
               <div className="space-y-1">
@@ -227,11 +223,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onToggleFavorite(tool.id); }}
-                      className="shrink-0 p-1 hover:bg-stone-200 rounded-full cursor-pointer text-yellow-500"
+                      className="shrink-0 p-1 hover:bg-stone-200 rounded-full cursor-pointer"
                       title="Remove from favorites"
                       aria-label="Remove from favorites"
                     >
-                      <span aria-hidden>★</span>
+                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                     </button>
                   </div>
                 ))}
@@ -278,7 +274,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded-md transition-colors"
                     onClick={(e) => handleToggleClick(e, category.id)}
                 >
-                  <span className="w-3.5 h-3.5 inline-block text-current text-xs leading-none" aria-hidden>{isExpanded ? '▼' : '▶'}</span>
+                  {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 </div>
               </div>
 
@@ -313,11 +309,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                           <span className="truncate min-w-0">{tool.name}</span>
                           {/* Access Level Badge - always visible */}
                           {tool.accessLevel !== 'basic' && (
-                             <span className="shrink-0 text-xs" title={tool.accessLevel === 'premium' ? 'Premium Tool' : 'Pro Tool'} aria-hidden>
+                             <span className="shrink-0" title={tool.accessLevel === 'premium' ? 'Premium Tool' : 'Pro Tool'}>
                                {tool.accessLevel === 'premium' ? (
-                                 <span className="text-purple-600">💎</span>
+                                 <Gem size={12} className="text-purple-600 fill-purple-100" />
                                ) : (
-                                 <span className="text-brand-600">◆</span>
+                                 <Crown size={12} className="text-brand-600 fill-brand-100" />
                                )}
                              </span>
                           )}
@@ -332,7 +328,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           title={isFav ? 'Remove from favorites' : 'Add to favorites'}
                           aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                          <span aria-hidden>★</span>
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                         </button>
                       </div>
                     );
@@ -344,7 +340,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       onClick={(e) => handleLoadMore(e, category.id)}
                       className="w-full text-left flex items-center gap-1 pl-4 py-2 text-[11px] font-medium text-brand-600 hover:underline hover:text-brand-700 transition-colors"
                     >
-                      <span aria-hidden>+</span> Load more
+                      <Plus className="w-3 h-3" /> Load more
                     </button>
                   )}
                 </div>
@@ -362,7 +358,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-bold transition-all border mb-2 ${activeView === 'sales-agent' ? 'bg-gradient-to-r from-brand-600 to-orange-500 text-white border-transparent shadow-lg' : 'bg-white border-brand-200 text-brand-700 hover:bg-brand-50'}`}
          >
           <div className="flex items-center gap-2">
-              <span className="text-lg" aria-hidden>🤖</span>
+              <Bot className="w-5 h-5" />
               <span>AI Sales Agent</span>
           </div>
           {activeView !== 'sales-agent' && <span className="bg-brand-100 text-brand-700 text-[9px] px-1.5 py-0.5 rounded uppercase">New</span>}
@@ -372,12 +368,12 @@ const Sidebar: React.FC<SidebarProps> = ({
          <div className="flex items-center gap-1">
            {onLogout && (
              <button onClick={onLogout} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-all" title="Sign out" aria-label="Sign out">
-               <span aria-hidden>⎋</span>
+               <LogOut className="w-4 h-4" />
              </button>
            )}
            {onToggleDesktopSidebar && (
              <button onClick={onToggleDesktopSidebar} className="flex items-center justify-center gap-2 flex-1 py-2.5 text-stone-500 hover:text-stone-800 hover:bg-stone-50 rounded-lg text-sm font-medium transition-all" title="Close sidebar" aria-label="Close sidebar">
-               <span aria-hidden>◀</span>
+               <PanelLeft className="w-4 h-4" />
              </button>
            )}
          </div>

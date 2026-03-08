@@ -1,16 +1,12 @@
 import React from 'react';
 import { Category, Tool, UserTier, ToolAccessLevel, userTierCanAccessTool } from '../types';
+import { getIcon, Search, PlayCircle, BarChart2, Lock, ArrowRight } from '../lib/safeIcons';
 
 interface CategoryViewProps {
   category: Category;
   onSelectTool: (tool: Tool) => void;
   userTier: UserTier;
 }
-
-/** Safe placeholder (no lucide) to avoid minification issues in production. */
-const getIcon = (name: string, className?: string) => (
-  <span className={className || 'w-4 h-4'} aria-hidden>◆</span>
-);
 
 const CategoryView: React.FC<CategoryViewProps> = ({ category, onSelectTool, userTier }) => {
   
@@ -100,13 +96,13 @@ const CategoryView: React.FC<CategoryViewProps> = ({ category, onSelectTool, use
         <div className="flex-[0.6] p-6 flex flex-col justify-between relative z-10">
           <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className={`p-1.5 rounded-md text-sm ${tool.type === 'hype' ? 'bg-purple-100/50 text-purple-600' : 'bg-green-100/50 text-green-600'}`}>
-                  <span aria-hidden>{tool.type === 'hype' ? '▶' : '▣'}</span>
+                <div className={`p-1.5 rounded-md ${tool.type === 'hype' ? 'bg-purple-100/50 text-purple-600' : 'bg-green-100/50 text-green-600'}`}>
+                  {tool.type === 'hype' ? <PlayCircle size={14} /> : <BarChart2 size={14} />}
                 </div>
                 {/* Access Badge */}
                 {tool.accessLevel !== 'basic' && (
                   <span className={`${getTierColor(tool.accessLevel)} text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm`}>
-                    {locked && <span className="opacity-90" aria-hidden>🔒</span>}
+                    {locked && <Lock className="w-2.5 h-2.5" />}
                     {tool.accessLevel}
                   </span>
                 )}
@@ -120,7 +116,7 @@ const CategoryView: React.FC<CategoryViewProps> = ({ category, onSelectTool, use
           </div>
           
           <div className={`flex items-center gap-1 text-xs font-bold transition-colors mt-2 ${locked ? 'text-stone-300' : 'text-stone-400 group-hover:text-brand-600'}`}>
-            {locked ? 'Upgrade to Unlock' : 'Launch Tool'} <span className={!locked ? "group-hover:translate-x-1 transition-transform inline-block" : ""} aria-hidden>→</span>
+            {locked ? 'Upgrade to Unlock' : 'Launch Tool'} <ArrowRight size={12} className={!locked ? "group-hover:translate-x-1 transition-transform" : ""} />
           </div>
         </div>
 
@@ -182,7 +178,7 @@ const CategoryView: React.FC<CategoryViewProps> = ({ category, onSelectTool, use
         <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-stone-800">Available Tools</h2>
             <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4 pointer-events-none" aria-hidden>⌕</span>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
                 <input 
                   type="text" 
                   placeholder={`Search ${category.name}...`}

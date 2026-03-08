@@ -1,19 +1,6 @@
 import React from 'react';
 import { Category, Tool, UserTier, ToolAccessLevel, userTierCanAccessTool } from '../types';
-
-interface DashboardProps {
-  categories: Category[];
-  onSelectTool: (tool: Tool) => void;
-  onSelectCategory: (category: Category) => void;
-  userTier: UserTier;
-  searchQuery?: string;
-  onSearchChange?: (value: string) => void;
-}
-
-/** Safe icon placeholder (no lucide) to avoid minification "X is not a constructor" in production. */
-const getIcon = (name: string, className?: string) => (
-  <span className={className || 'w-4 h-4'} aria-hidden>◆</span>
-);
+import { getIcon, Search, PlayCircle, BarChart2, Lock, ArrowRight } from '../lib/safeIcons';
 
 const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelectCategory, userTier, searchQuery, onSearchChange }) => {
   
@@ -72,13 +59,13 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
         <div className="flex-[0.6] p-6 flex flex-col justify-between relative z-10">
           <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className={`p-1.5 rounded-md text-sm ${tool.type === 'hype' ? 'bg-purple-100/50 text-purple-600' : 'bg-green-100/50 text-green-600'}`}>
-                  <span aria-hidden>{tool.type === 'hype' ? '▶' : '▣'}</span>
+                <div className={`p-1.5 rounded-md ${tool.type === 'hype' ? 'bg-purple-100/50 text-purple-600' : 'bg-green-100/50 text-green-600'}`}>
+                  {tool.type === 'hype' ? <PlayCircle size={14} /> : <BarChart2 size={14} />}
                 </div>
                 {/* Access Badge */}
                 {tool.accessLevel !== 'basic' && (
                   <span className={`${getTierColor(tool.accessLevel)} text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm`}>
-                    {locked && <span className="opacity-90" aria-hidden>🔒</span>}
+                    {locked && <Lock className="w-2.5 h-2.5" />}
                     {tool.accessLevel}
                   </span>
                 )}
@@ -92,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
           </div>
           
           <div className={`flex items-center gap-1 text-xs font-bold transition-colors mt-2 ${locked ? 'text-stone-300' : 'text-stone-400 group-hover:text-brand-600'}`}>
-            {locked ? 'Upgrade to Unlock' : 'Launch Tool'} <span className={!locked ? "group-hover:translate-x-1 transition-transform inline-block" : ""} aria-hidden>→</span>
+            {locked ? 'Upgrade to Unlock' : 'Launch Tool'} <ArrowRight size={12} className={!locked ? "group-hover:translate-x-1 transition-transform" : ""} />
           </div>
         </div>
 
@@ -154,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
               onChange={(e) => onSearchChange?.(e.target.value)}
               className="relative w-full py-4 pl-12 pr-4 bg-white/90 backdrop-blur-md rounded-full text-stone-800 placeholder-stone-400 focus:outline-none focus:bg-white shadow-lg border border-white/40 transition-all"
             />
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5 z-20 pointer-events-none" aria-hidden>⌕</span>
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5 z-20" />
           </div>
         </div>
       </div>
@@ -170,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
       <div className="space-y-12">
         {categories.length === 0 ? (
           <div className="text-center py-16 text-stone-500">
-            <span className="text-3xl mx-auto mb-4 opacity-50 block" aria-hidden>⌕</span>
+            <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="font-medium">Bu arama ile eşleşen araç yok.</p>
             <p className="text-sm mt-1">Farklı bir anahtar kelime deneyin.</p>
           </div>
@@ -185,7 +172,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, onSelectTool, onSelec
                 onClick={() => onSelectCategory(cat)}
                 className="text-sm text-brand-600 font-medium hover:text-brand-700 flex items-center gap-1 transition-all hover:gap-2 px-3 py-1 rounded-lg hover:bg-brand-50/50"
               >
-                View all <span className="inline-block" aria-hidden>→</span>
+                View all <ArrowRight className="w-4 h-4" />
               </button>
             </div>
             
