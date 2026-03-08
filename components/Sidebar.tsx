@@ -181,6 +181,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     ${isDesktopOpen ? 'lg:w-72' : 'lg:w-0 lg:overflow-hidden lg:border-none lg:p-0'}
   `;
 
+  // #region agent log
+  fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'Sidebar.tsx:beforeReturn',message:'Sidebar about to return JSX',data:{favoritesLen:favorites?.length??0},timestamp:Date.now(),hypothesisId:'E2'})}).catch(()=>{});
+  // #endregion
   return (
     <>
     {/* Mini icon bar when desktop sidebar is closed — scrollable, no scrollbar */}
@@ -229,6 +232,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Favorites Section (draggable order, inlined to avoid minification issues) */}
         {favorites.length > 0 && (() => {
+          // #region agent log
+          fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'Sidebar.tsx:favIIFE',message:'Sidebar favorites IIFE start',data:{},timestamp:Date.now(),hypothesisId:'E2'})}).catch(()=>{});
+          // #endregion
           const favTools = getFavoriteTools();
           const canReorder = Boolean(onReorderFavorites && favorites.length > 1);
           const handleFavDragStart = (e: React.DragEvent, toolId: string) => {
