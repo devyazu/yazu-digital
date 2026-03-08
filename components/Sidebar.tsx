@@ -5,7 +5,7 @@ import {
   TrendingDown, DollarSign, Eye, ShoppingCart, Palette, 
   Box, Swords, ShoppingBag, Mail, Globe, PenTool, Zap, Plus,
   Video, Image, Users, Repeat, Megaphone, Shield, Search, Heart,
-  Crown, Gem, Star, History, Code, Tag, Truck, Store,   Bot, LifeBuoy, MapPin, Gamepad2, Briefcase, Facebook, Music,
+  Crown, Gem, History, Code, Tag, Truck, Store,   Bot, LifeBuoy, MapPin, Gamepad2, Briefcase, Facebook, Music,
   PlayCircle, Camera, Shirt, Disc, Film, Edit3, Lock, MessageSquare,
   Gift, Book, Clipboard, Hash, Layers, GitMerge, Grid, Map,
   Bell, Sticker, PanelLeft, LogOut
@@ -400,10 +400,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                             e.stopPropagation();
                             onToggleFavorite(tool.id);
                           }}
-                          className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-full transition-all ${isFav ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 text-stone-300 hover:text-yellow-400'}`}
+                          className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-full transition-all text-[12px] ${isFav ? 'opacity-100 text-yellow-500' : 'opacity-0 group-hover:opacity-100 text-stone-300 hover:text-yellow-500'}`}
                           title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                          aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                           <Star size={12} className={isFav ? "fill-yellow-400 text-yellow-400" : ""} />
+                          <span aria-hidden>★</span>
                         </button>
                       </div>
                     );
