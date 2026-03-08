@@ -144,24 +144,30 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ tool, brand, onBack }) =>
           </div>
         </div>
 
-        {/* Brand Context Toggle (Disable Switch) */}
+        {/* Brand Context Toggle */}
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-stone-500 hidden sm:inline">
+          <span className="text-sm font-medium text-stone-600 hidden sm:inline leading-none">
             {isBrandContextActive ? `Using ${brand.name} Assets` : 'Generic Mode'}
           </span>
-          <button 
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isBrandContextActive}
             onClick={() => setIsBrandContextActive(!isBrandContextActive)}
+            title={isBrandContextActive ? 'Disable brand data' : 'Enable brand data'}
             className={`
-              relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none
+              relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+              transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
               ${isBrandContextActive ? 'bg-green-500' : 'bg-stone-300'}
             `}
-            title={isBrandContextActive ? "Disable Brand Data" : "Enable Brand Data"}
           >
-            <span 
+            <span
+              aria-hidden
               className={`
-                block w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out mt-1 ml-1
+                absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm
+                transition-transform duration-200 ease-in-out
                 ${isBrandContextActive ? 'translate-x-5' : 'translate-x-0'}
-              `} 
+              `}
             />
           </button>
         </div>

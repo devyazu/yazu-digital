@@ -20,7 +20,7 @@ import NotificationsPanel from './components/NotificationsPanel';
 import { CATEGORIES as INITIAL_CATEGORIES } from './data';
 import { Tool, Brand, Category, SalesAgentConfig, UserProfile, userTierCanAccessTool, TIER_DEFAULTS } from './types';
 import { getBrands, createBrand, uploadBrandLogo } from './services/brandService';
-import { getProfile, type Profile } from './services/profileService';
+import { getProfile, updateProfile, type Profile } from './services/profileService';
 import { getUnreadNotificationCount } from './services/notificationsService';
 
 function filterCategoriesBySearch(categories: Category[], query: string): Category[] {
@@ -95,6 +95,13 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     getProfile(authUser.id).then(({ profile: p }) => setProfile(p ?? null));
   }, [authUser?.id]);
 
+  // Favorites: load from profile once, persist on toggle/reorder
+  const [favorites, setFavorites] = useState<string[]>([]);
+  useEffect(() => {
+    if (!profile?.id || !Array.isArray(profile.favorite_tool_ids)) return;
+    setFavorites(profile.favorite_tool_ids);
+  }, [profile?.id]);
+
   const userProfile: UserProfile | null = useMemo(() => {
     if (!authUser) return null;
     const p = profile;
@@ -124,9 +131,6 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     joinedDate: new Date().toISOString().slice(0, 10),
   }), [authUser?.id, authUser?.email]);
 
-  // User State
-  const [favorites, setFavorites] = useState<string[]>([]);
-
   // UI State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // Desktop
@@ -155,10 +159,21 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     setIsDesktopSidebarOpen(!isDesktopSidebarOpen);
   };
 
+  const persistFavorites = (next: string[]) => {
+    if (!authUser?.id) return;
+    setFavorites(next);
+    updateProfile(authUser.id, { favorite_tool_ids: next }).catch(() => {});
+  };
+
   const handleToggleFavorite = (toolId: string) => {
-    setFavorites(prev => 
-      prev.includes(toolId) ? prev.filter(id => id !== toolId) : [...prev, toolId]
-    );
+    const next = favorites.includes(toolId)
+      ? favorites.filter(id => id !== toolId)
+      : [...favorites, toolId];
+    persistFavorites(next);
+  };
+
+  const handleReorderFavorites = (newOrder: string[]) => {
+    persistFavorites(newOrder);
   };
 
   const handleSelectTool = (tool: Tool) => {
@@ -289,6 +304,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           onToggleDesktopSidebar={handleToggleDesktopSidebar}
           favorites={favorites}
           onToggleFavorite={handleToggleFavorite}
+          onReorderFavorites={handleReorderFavorites}
           user={userProfile ?? DEFAULT_USER_PROFILE}
           onLogout={onLogout}
         />

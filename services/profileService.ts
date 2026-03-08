@@ -16,6 +16,8 @@ export interface Profile {
   credits_total: number;
   credits_used: number;
   max_brands: number;
+  /** Ordered list of favorite tool IDs for sidebar */
+  favorite_tool_ids?: string[];
 }
 
 const CONFIRM_DEADLINE_HOURS = 3;
@@ -26,15 +28,19 @@ export async function getProfile(userId: string): Promise<{ profile: Profile | n
   if (!supabase) return { profile: null, error: new Error('Supabase not configured') };
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands')
+    .select('id, email_confirmed_at, created_at, full_name, first_name, last_name, company_name, job_title, avatar_url, tier, credits_total, credits_used, max_brands, favorite_tool_ids')
     .eq('id', userId)
     .maybeSingle();
   const profile = data as Profile | null;
-  if (profile && (profile.tier == null || profile.credits_total == null)) {
-    profile.tier = profile.tier ?? 'free';
-    profile.credits_total = profile.credits_total ?? 1000;
-    profile.credits_used = profile.credits_used ?? 0;
-    profile.max_brands = profile.max_brands ?? 1;
+  if (profile) {
+    if (profile.tier == null || profile.credits_total == null) {
+      profile.tier = profile.tier ?? 'free';
+      profile.credits_total = profile.credits_total ?? 1000;
+      profile.credits_used = profile.credits_used ?? 0;
+      profile.max_brands = profile.max_brands ?? 1;
+    }
+    const raw = (data as { favorite_tool_ids?: unknown })?.favorite_tool_ids;
+    profile.favorite_tool_ids = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
   }
   return { profile, error: error ?? null };
 }
@@ -50,6 +56,7 @@ export interface ProfileUpdate {
   credits_total?: number | null;
   credits_used?: number | null;
   max_brands?: number | null;
+  favorite_tool_ids?: string[];
 }
 
 export async function updateProfile(userId: string, updates: ProfileUpdate): Promise<{ error: Error | null }> {

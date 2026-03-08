@@ -8,7 +8,7 @@ import {
   Crown, Gem, Star, History, Code, Tag, Truck, Store,   Bot, LifeBuoy, MapPin, Gamepad2, Briefcase, Facebook, Music,
   PlayCircle, Camera, Shirt, Disc, Film, Edit3, Lock, MessageSquare,
   Gift, Book, Clipboard, Hash, Layers, GitMerge, Grid, Map,
-  Bell, Sticker, PanelLeft, LogOut
+  Bell, Sticker, PanelLeft, LogOut, GripVertical
 } from 'lucide-react';
 import { Category, Tool, UserProfile } from '../types';
 
@@ -78,6 +78,108 @@ const getIcon = (name: string, className?: string) => {
   }
 };
 
+/** Favorites list with drag-and-drop reorder. Order follows `favorites` array. */
+function FavoritesList({
+  tools,
+  favorites,
+  selectedToolId,
+  onSelectTool,
+  onToggleFavorite,
+  onReorderFavorites,
+}: {
+  tools: Tool[];
+  favorites: string[];
+  selectedToolId: string | null;
+  onSelectTool: (tool: Tool) => void;
+  onToggleFavorite: (toolId: string) => void;
+  onReorderFavorites?: (newOrder: string[]) => void;
+}) {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, toolId: string) => {
+    setDraggedId(toolId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', toolId);
+    e.dataTransfer.setData('application/x-tool-id', toolId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, toolId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedId && draggedId !== toolId) setDragOverId(toolId);
+  };
+
+  const handleDragLeave = () => setDragOverId(null);
+
+  const handleDrop = (e: React.DragEvent, dropTargetId: string) => {
+    e.preventDefault();
+    setDragOverId(null);
+    setDraggedId(null);
+    const fromId = e.dataTransfer.getData('application/x-tool-id') || e.dataTransfer.getData('text/plain');
+    if (!fromId || fromId === dropTargetId || !onReorderFavorites) return;
+    const idx = favorites.indexOf(fromId);
+    const dropIdx = favorites.indexOf(dropTargetId);
+    if (idx === -1 || dropIdx === -1) return;
+    const next = [...favorites];
+    next.splice(idx, 1);
+    next.splice(dropIdx, 0, fromId);
+    onReorderFavorites(next);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const canReorder = Boolean(onReorderFavorites && favorites.length > 1);
+
+  return (
+    <div className="space-y-1">
+      {tools.map((tool) => (
+        <div
+          key={`fav-${tool.id}`}
+          onDragOver={(e) => canReorder && handleDragOver(e, tool.id)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, tool.id)}
+          className={`
+            flex items-center gap-2 rounded-lg transition-all
+            ${draggedId === tool.id ? 'opacity-50' : ''}
+            ${dragOverId === tool.id ? 'ring-1 ring-brand-400 bg-brand-50/50' : ''}
+          `}
+        >
+          {canReorder && (
+            <div
+              draggable
+              onDragStart={(e) => handleDragStart(e, tool.id)}
+              onDragEnd={handleDragEnd}
+              className="shrink-0 cursor-grab active:cursor-grabbing text-stone-400 hover:text-stone-600 touch-none p-0.5 -m-0.5 rounded"
+              title="Drag to reorder"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onSelectTool(tool)}
+            className={`flex-1 min-w-0 text-left flex items-center gap-2 px-2 py-1.5 text-[13px] rounded-lg transition-all ${selectedToolId === tool.id ? 'bg-brand-50 text-brand-700 font-medium' : 'text-stone-600 hover:bg-stone-50'}`}
+          >
+            <span className="truncate">{tool.name}</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(tool.id); }}
+            className="shrink-0 p-1 hover:bg-stone-200 rounded-full cursor-pointer"
+            title="Remove from favorites"
+          >
+            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 interface SidebarProps {
   categories: Category[];
   selectedTool: Tool | null;
@@ -91,6 +193,7 @@ interface SidebarProps {
   onToggleDesktopSidebar?: () => void;
   favorites: string[];
   onToggleFavorite: (toolId: string) => void;
+  onReorderFavorites?: (newOrder: string[]) => void;
   user: UserProfile;
   onLogout?: () => void;
 }
@@ -108,6 +211,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggleDesktopSidebar,
   favorites,
   onToggleFavorite,
+  onReorderFavorites,
   user,
   onLogout,
 }) => {
@@ -156,9 +260,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     }));
   };
 
-  const getFavoriteTools = () => {
+  const getFavoriteTools = (): Tool[] => {
     const allTools = categories.flatMap(c => c.tools);
-    return allTools.filter(t => favorites.includes(t.id));
+    const byId = new Map(allTools.map(t => [t.id, t]));
+    return favorites.map(id => byId.get(id)).filter((t): t is Tool => t != null);
   };
 
   // Mini sidebar: visible only on desktop when main sidebar is closed
@@ -218,30 +323,21 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span>Chat Archive</span>
         </button>
 
-        {/* Favorites Section */}
+        {/* Favorites Section (draggable order) */}
         {favorites.length > 0 && (
           <div className="animate-in fade-in slide-in-from-top-2">
              <h2 className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2 mb-2 px-2">
                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
                Favorites
              </h2>
-             <div className="space-y-1">
-               {getFavoriteTools().map(tool => (
-                 <button
-                   key={`fav-${tool.id}`}
-                   onClick={() => onSelectTool(tool)}
-                   className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-[13px] rounded-lg transition-all ${selectedTool?.id === tool.id ? 'bg-brand-50 text-brand-700 font-medium' : 'text-stone-600 hover:bg-stone-50'}`}
-                 >
-                   <span className="truncate flex-1">{tool.name}</span>
-                   <div 
-                      onClick={(e) => { e.stopPropagation(); onToggleFavorite(tool.id); }}
-                      className="cursor-pointer p-1 hover:bg-stone-200 rounded-full"
-                   >
-                     <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                   </div>
-                 </button>
-               ))}
-             </div>
+             <FavoritesList
+               tools={getFavoriteTools()}
+               favorites={favorites}
+               selectedToolId={selectedTool?.id ?? null}
+               onSelectTool={onSelectTool}
+               onToggleFavorite={onToggleFavorite}
+               onReorderFavorites={onReorderFavorites}
+             />
           </div>
         )}
       </div>
@@ -300,7 +396,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     return (
                       <div
                         key={tool.id}
-                        className={`group flex items-center justify-between pr-2 rounded-lg transition-all ${
+                        className={`group flex items-center gap-1 pr-2 rounded-lg transition-all min-w-0 ${
                           selectedTool?.id === tool.id
                             ? 'bg-brand-50/80'
                             : 'hover:bg-stone-100/50'
@@ -308,18 +404,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                       >
                         <button
                           onClick={() => onSelectTool(tool)}
-                          className={`flex-1 text-left flex items-center gap-2 pl-4 py-2 text-[13px] ${
+                          className={`flex-1 min-w-0 text-left flex items-center gap-2 pl-4 py-2 text-[13px] ${
                             selectedTool?.id === tool.id
                               ? 'text-brand-700 font-medium'
                               : 'text-stone-500 group-hover:text-stone-800'
                           }`}
                         >
-                          <div className="opacity-70">{getIcon(tool.iconName, "w-3 h-3")}</div>
-                          <span className="truncate">{tool.name}</span>
-                          
-                          {/* Access Level Badge */}
+                          <div className="shrink-0 opacity-70">{getIcon(tool.iconName, "w-3 h-3")}</div>
+                          <span className="truncate min-w-0">{tool.name}</span>
+                          {/* Access Level Badge - always visible */}
                           {tool.accessLevel !== 'basic' && (
-                             <span title={tool.accessLevel === 'premium' ? 'Premium Tool' : 'Pro Tool'}>
+                             <span className="shrink-0" title={tool.accessLevel === 'premium' ? 'Premium Tool' : 'Pro Tool'}>
                                {tool.accessLevel === 'premium' ? (
                                  <Gem size={12} className="text-purple-600 fill-purple-100" />
                                ) : (
@@ -328,14 +423,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                              </span>
                           )}
                         </button>
-                        
-                        {/* Favorite Star (Visible on hover or if active) */}
-                        <button 
+                        {/* Favorite star: fixed width so it never gets pushed off */}
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onToggleFavorite(tool.id);
                           }}
-                          className={`p-1 rounded-full transition-all ${isFav ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 text-stone-300 hover:text-yellow-400'}`}
+                          className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-full transition-all ${isFav ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 text-stone-300 hover:text-yellow-400'}`}
+                          title={isFav ? 'Remove from favorites' : 'Add to favorites'}
                         >
                            <Star size={12} className={isFav ? "fill-yellow-400 text-yellow-400" : ""} />
                         </button>
