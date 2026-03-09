@@ -1,9 +1,10 @@
 /**
- * Admin: E-posta şablonları listele (GET) ve güncelle (PUT).
+ * Admin: E-posta şablonları listele (GET), güncelle (PUT), test maili gönder (POST).
+ * POST body: { templateSlug, to, placeholders? } = test email.
  * Authorization: Bearer <admin JWT>
  */
 import requireAdmin from '../../server-lib/adminAuth.js';
-import { stripDataUrlsFromHtml } from '../../server-lib/emailHelpers.js';
+import { stripDataUrlsFromHtml, sendTemplatedEmail } from '../../server-lib/emailHelpers.js';
 
 function send(res, status, body) {
   if (typeof res?.setHeader === 'function') res.setHeader('Content-Type', 'application/json');
@@ -14,12 +15,12 @@ function send(res, status, body) {
 export default async function handler(req, res) {
   if (res?.setHeader) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
   const method = req?.method ?? req?.headers?.['x-vercel-forwarded-method'];
   if (method === 'OPTIONS') return res.status(200).end();
-  if (method !== 'GET' && method !== 'PUT') return send(res, 405, { error: 'Method not allowed' });
+  if (!['GET', 'PUT', 'POST'].includes(method)) return send(res, 405, { error: 'Method not allowed' });
 
   const authResult = await requireAdmin(req, res);
   if (!authResult) return;
@@ -70,5 +71,31 @@ export default async function handler(req, res) {
     }
     if (!data) return send(res, 404, { error: 'Template not found' });
     return send(res, 200, { template: data });
+  }
+
+  if (method === 'POST') {
+    let body;
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    } catch {
+      return send(res, 400, { error: 'Invalid JSON body' });
+    }
+    const { templateSlug, to, placeholders } = body || {};
+    if (!templateSlug || !to) {
+      return send(res, 400, { error: 'templateSlug and to are required' });
+    }
+    const toStr = String(to).trim();
+    if (!toStr) return send(res, 400, { error: 'to must be a non-empty email' });
+    try {
+      await sendTemplatedEmail(supabaseAdmin, {
+        slug: templateSlug,
+        to: toStr,
+        placeholders: placeholders || {},
+      });
+      return send(res, 200, { ok: true, message: 'Test email sent' });
+    } catch (e) {
+      console.error('Send test email error:', e);
+      return send(res, 500, { error: 'Failed to send test email', detail: e?.message });
+    }
   }
 }

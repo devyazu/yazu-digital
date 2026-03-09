@@ -312,7 +312,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     setDeletingUserId(user.id);
     setUsersError(null);
     try {
-      const r = await fetch('/api/admin/delete-user', {
+      const r = await fetch('/api/admin/user', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ user_id: user.id }),
@@ -332,7 +332,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     setEditUserSaving(true);
     setEditUserError(null);
     try {
-      const r = await fetch('/api/admin/update-user', {
+      const r = await fetch('/api/admin/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({
@@ -1278,7 +1278,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
     setTestEmailSending(true);
     setTestEmailError(null);
     try {
-      const r = await fetch('/api/admin/send-test-email', {
+      const r = await fetch('/api/admin/email-templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ templateSlug: selectedTemplateSlug, to: testEmailTo.trim(), placeholders: {} }),

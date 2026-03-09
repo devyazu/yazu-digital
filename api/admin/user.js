@@ -1,6 +1,7 @@
 /**
- * Admin: Update a user's profile (tier, credits, name, etc.) and optionally is_admin.
- * PATCH body: user_id, full_name?, first_name?, last_name?, company_name?, job_title?, tier?, credits_total?, credits_used?, max_brands?, is_admin?
+ * Admin: User update (PATCH) and delete (DELETE) in one handler.
+ * PATCH body: user_id, first_name?, last_name?, email?, company_name?, job_title?, tier?, credits_total?, credits_used?, max_brands?, is_admin?
+ * DELETE body: { user_id: string }
  */
 import requireAdmin from '../../server-lib/adminAuth.js';
 
@@ -12,32 +13,48 @@ function send(res, status, body) {
   return res?.end?.(JSON.stringify(body));
 }
 
-export default async function handler(req, res) {
-  if (res?.setHeader) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  }
-  const method = req?.method ?? req?.headers?.['x-vercel-forwarded-method'];
-  if (method === 'OPTIONS') return res.status(200).end();
-  if (method !== 'PATCH') return send(res, 405, { error: 'Method not allowed' });
-
-  const authResult = await requireAdmin(req, res);
-  if (!authResult) return;
-  const { supabaseAdmin } = authResult;
-
+async function handleDelete(req, res, authResult) {
+  const { caller, supabaseAdmin } = authResult;
   let body;
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
   } catch {
     return send(res, 400, { error: 'Invalid JSON body' });
   }
-
   const userId = body.user_id;
   if (!userId || typeof userId !== 'string') {
     return send(res, 400, { error: 'user_id is required' });
   }
+  if (userId === caller.id) {
+    return send(res, 400, { error: 'You cannot delete your own account' });
+  }
+  const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+  const email = userData?.user?.email;
+  if (!userData?.user) {
+    return send(res, 404, { error: 'User not found' });
+  }
+  await supabaseAdmin.from('admin_users').delete().eq('email', email || '');
+  await supabaseAdmin.from('profiles').delete().eq('id', userId);
+  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  if (deleteError) {
+    console.error('auth.admin.deleteUser error:', deleteError);
+    return send(res, 500, { error: 'Failed to delete user', detail: deleteError?.message });
+  }
+  return send(res, 200, { ok: true });
+}
 
+async function handleUpdate(req, res, authResult) {
+  const { supabaseAdmin } = authResult;
+  let body;
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+  } catch {
+    return send(res, 400, { error: 'Invalid JSON body' });
+  }
+  const userId = body.user_id;
+  if (!userId || typeof userId !== 'string') {
+    return send(res, 400, { error: 'user_id is required' });
+  }
   const profileUpdates = {};
   if (body.first_name !== undefined) profileUpdates.first_name = body.first_name;
   if (body.last_name !== undefined) profileUpdates.last_name = body.last_name;
@@ -107,4 +124,23 @@ export default async function handler(req, res) {
   }
 
   return send(res, 200, { ok: true });
+}
+
+export default async function handler(req, res) {
+  if (res?.setHeader) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'PATCH, DELETE, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  const method = req?.method ?? req?.headers?.['x-vercel-forwarded-method'];
+  if (method === 'OPTIONS') return res.status(200).end();
+  if (!['PATCH', 'DELETE', 'POST'].includes(method)) return send(res, 405, { error: 'Method not allowed' });
+
+  const authResult = await requireAdmin(req, res);
+  if (!authResult) return;
+
+  if (method === 'DELETE' || method === 'POST') {
+    return handleDelete(req, res, authResult);
+  }
+  return handleUpdate(req, res, authResult);
 }
