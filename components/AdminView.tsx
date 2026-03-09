@@ -576,7 +576,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
               <th className="px-3 py-2">Max</th>
               <th className="px-3 py-2">Joined</th>
               <th className="px-3 py-2">Role</th>
-              <th className="px-3 py-2 w-10 text-center">Action</th>
+              <th className="px-3 py-2 text-center min-w-[5.5rem]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
@@ -625,8 +625,8 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                       {user.is_admin ? 'Admin' : 'User'}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-center">
-                    <div className="inline-flex items-center gap-1">
+                  <td className="px-3 py-2 text-center whitespace-nowrap">
+                    <div className="inline-flex items-center justify-center gap-1">
                       <button
                         type="button"
                         onClick={() => openEditUser(user)}
@@ -639,7 +639,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                         type="button"
                         onClick={() => handleDeleteUser(user)}
                         disabled={deletingUserId === user.id}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                         title="Delete user"
                       >
                         {deletingUserId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -990,7 +990,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                   <th className="px-4 py-3 font-bold text-stone-600">Price</th>
                   <th className="px-4 py-3 font-bold text-stone-600">Stripe Price ID</th>
                   <th className="px-4 py-3 font-bold text-stone-600">Status</th>
-                  <th className="px-4 py-3 font-bold text-stone-600"></th>
+                  <th className="px-4 py-3 font-bold text-stone-600 min-w-[8rem]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1001,13 +1001,15 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                     <td className="px-4 py-3">{(p.price_amount_cents / 100).toFixed(2)} {p.currency}</td>
                     <td className="px-4 py-3 font-mono text-xs text-stone-500">{p.stripe_price_id || '—'}</td>
                     <td className="px-4 py-3">{p.is_active ? <span className="text-green-600">Active</span> : <span className="text-stone-400">Inactive</span>}</td>
-                    <td className="px-4 py-3 flex items-center gap-2">
-                      <button type="button" onClick={() => { setEditingSubscriptionProduct(p); setEditSubscriptionProductForm({ name: p.name, price_amount_cents: String(p.price_amount_cents / 100), currency: p.currency, is_active: p.is_active }); }} className="text-brand-600 hover:underline flex items-center gap-1">
-                        <Pencil className="w-3 h-3" /> Edit
-                      </button>
-                      <button type="button" onClick={() => handleDeleteProduct(p.id, p.name)} disabled={deletingProductId === p.id} className="text-red-600 hover:underline flex items-center gap-1 disabled:opacity-50" title="Delete package">
-                        {deletingProductId === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} Delete
-                      </button>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-2">
+                        <button type="button" onClick={() => { setEditingSubscriptionProduct(p); setEditSubscriptionProductForm({ name: p.name, price_amount_cents: String(p.price_amount_cents / 100), currency: p.currency, is_active: p.is_active }); }} className="text-brand-600 hover:underline flex items-center gap-1">
+                          <Pencil className="w-3 h-3" /> Edit
+                        </button>
+                        <button type="button" onClick={() => handleDeleteProduct(p.id, p.name)} disabled={deletingProductId === p.id} className="text-red-600 hover:underline flex items-center gap-1 disabled:opacity-50" title="Delete package">
+                          {deletingProductId === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} Delete
+                        </button>
+                      </span>
                     </td>
                   </tr>
                 ))}
