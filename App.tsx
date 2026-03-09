@@ -88,12 +88,14 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const startPlan = typeof window !== 'undefined' ? window.sessionStorage.getItem('start_plan') : null;
   const pendingCheckout = startPlan && startPlan !== 'free' && !!authUser?.id;
   const [checkoutRedirecting, setCheckoutRedirecting] = useState(pendingCheckout);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   useEffect(() => {
     if (checkoutRedirectStarted.current) return;
     const plan = typeof window !== 'undefined' ? window.sessionStorage.getItem('start_plan') : null;
     if (!plan || plan === 'free' || !session?.access_token) return;
     checkoutRedirectStarted.current = true;
     setCheckoutRedirecting(true);
+    setCheckoutError(null);
     const targetTier = plan === 'premium' ? 'premium' : plan === 'basic' ? 'basic' : 'pro';
     const base = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
     fetch(`${base}/api/create-checkout-session`, {
@@ -101,32 +103,28 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ targetTier }),
     })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.url) {
+      .then((r) => {
+        const ok = r.ok;
+        return r.json().then((data) => ({ ok, data }));
+      })
+      .then(({ ok, data }) => {
+        if (ok && data?.url) {
           window.sessionStorage.removeItem('start_plan');
           window.location.href = data.url;
         } else {
           checkoutRedirectStarted.current = false;
           window.sessionStorage.removeItem('start_plan');
           setCheckoutRedirecting(false);
+          setCheckoutError(data?.error || (ok ? 'Checkout link could not be created.' : 'Payment setup failed. Try again from Settings.'));
         }
       })
-      .catch(() => {
+      .catch((err) => {
         checkoutRedirectStarted.current = false;
         window.sessionStorage.removeItem('start_plan');
         setCheckoutRedirecting(false);
+        setCheckoutError(err?.message || 'Payment setup failed. Try again from Settings.');
       });
   }, [session?.access_token, authUser?.id]);
-
-  if (pendingCheckout || checkoutRedirecting) {
-    return (
-      <div className="min-h-screen bg-[#F2F2F0] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 text-brand-500 animate-spin" />
-        <p className="text-stone-600">Redirecting to checkout…</p>
-      </div>
-    );
-  }
 
   // Global Data State
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
@@ -354,11 +352,26 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   // #region agent log
   fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'App.tsx:MainAppReturn',message:'MainApp about to return EmailConfirmGate',data:{},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
   // #endregion
+
+  if (pendingCheckout || checkoutRedirecting) {
+    return (
+      <div className="min-h-screen bg-[#F2F2F0] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 text-brand-500 animate-spin" />
+        <p className="text-stone-600">Redirecting to checkout…</p>
+      </div>
+    );
+  }
+
   return (
     <EmailConfirmGate userId={authUser.id} onSignOut={onLogout}>
     <AppErrorBoundary>
     <div className="min-h-screen bg-[#F2F2F0] flex flex-col font-sans text-stone-800 relative selection:bg-brand-200 selection:text-brand-900">
-      
+      {checkoutError && (
+        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-sm text-center flex items-center justify-center gap-2 flex-wrap">
+          <span>{checkoutError}</span>
+          <button type="button" onClick={() => setCheckoutError(null)} className="underline">Dismiss</button>
+        </div>
+      )}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-200/30 rounded-full blur-[120px] mix-blend-multiply animate-pulse" style={{animationDuration: '8s'}}></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[30%] bg-blue-100/40 rounded-full blur-[100px] mix-blend-multiply"></div>
