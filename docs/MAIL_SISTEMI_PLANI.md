@@ -167,3 +167,14 @@ Editörde “Kullanılabilir değişkenler” kutusunda listelenebilir.
 ---
 
 Bu plan onaylandıktan sonra sırayla: migration + seed, API, mevcut akışların şablona bağlanması, ardından admin paneli (liste + GrapesJS editör) ve en son otomasyon arayüzü implemente edilebilir.
+
+---
+
+## 8. Aktivasyon maili gelmiyorsa
+
+Kayıt sonrası onay maili kullanıcıya ulaşmıyorsa kontrol edin:
+
+1. **Vercel env:** `SMTP_*` değişkenleri tanımlı mı? (api/send-confirm-email bu env’lerle gönderim yapar.)
+2. **Şablon:** Veritabanında `signup_confirm` slug’lı şablon var mı ve `is_active = true` mı? (Admin → Mail bölümünden bakılabilir.)
+3. **Spam / Gereksiz:** Mail spam veya “Promosyonlar” klasörüne düşmüş olabilir.
+4. **API adresi:** Uygulama hangi origin’de açıksa (örn. app.yazu.digital), `fetch` aynı origin’e `/api/send-confirm-email` isteği atar; Vercel’de bu API’nin deploy olduğundan emin olun.

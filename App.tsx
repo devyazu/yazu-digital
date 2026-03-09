@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
@@ -79,14 +79,21 @@ function AppContent() {
 
 function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: string }; onLogout: () => void }) {
   const { session } = useAuth();
+  const checkoutRedirectStarted = useRef(false);
   // #region agent log
   fetch('http://127.0.0.1:7491/ingest/d0db9da5-030c-4ef0-a8bf-f9f6a978cafd',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb67aa'},body:JSON.stringify({sessionId:'cb67aa',location:'App.tsx:MainApp',message:'MainApp render start',data:{userId:authUser?.id},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
   // #endregion
 
-  // Redirect to Stripe Checkout when user came from /start with a plan (e.g. sign up → then checkout)
+  // Redirect to Stripe Checkout when user came from /start with a plan (sign up → then checkout). Run when session is ready (can lag one tick after authUser).
+  const startPlan = typeof window !== 'undefined' ? window.sessionStorage.getItem('start_plan') : null;
+  const pendingCheckout = startPlan && startPlan !== 'free' && !!authUser?.id;
+  const [checkoutRedirecting, setCheckoutRedirecting] = useState(pendingCheckout);
   useEffect(() => {
+    if (checkoutRedirectStarted.current) return;
     const plan = typeof window !== 'undefined' ? window.sessionStorage.getItem('start_plan') : null;
     if (!plan || plan === 'free' || !session?.access_token) return;
+    checkoutRedirectStarted.current = true;
+    setCheckoutRedirecting(true);
     const targetTier = plan === 'premium' ? 'premium' : plan === 'basic' ? 'basic' : 'pro';
     const base = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
     fetch(`${base}/api/create-checkout-session`, {
@@ -99,10 +106,27 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         if (data?.url) {
           window.sessionStorage.removeItem('start_plan');
           window.location.href = data.url;
+        } else {
+          checkoutRedirectStarted.current = false;
+          window.sessionStorage.removeItem('start_plan');
+          setCheckoutRedirecting(false);
         }
       })
-      .catch(() => {});
-  }, [session?.access_token]);
+      .catch(() => {
+        checkoutRedirectStarted.current = false;
+        window.sessionStorage.removeItem('start_plan');
+        setCheckoutRedirecting(false);
+      });
+  }, [session?.access_token, authUser?.id]);
+
+  if (pendingCheckout || checkoutRedirecting) {
+    return (
+      <div className="min-h-screen bg-[#F2F2F0] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 text-brand-500 animate-spin" />
+        <p className="text-stone-600">Redirecting to checkout…</p>
+      </div>
+    );
+  }
 
   // Global Data State
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);

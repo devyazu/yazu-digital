@@ -11,19 +11,28 @@ export interface NotificationRow {
   read_at?: string | null;
 }
 
-/** Notifications visible to current user (RLS). */
+/** Notifications visible to current user (RLS). Only those created on or after the user's registration. */
 export async function getNotificationsForUser(): Promise<{
   data: NotificationRow[];
   error: Error | null;
 }> {
   if (!supabase) return { data: [], error: new Error('Supabase not configured') };
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) return { data: [], error: userError ?? new Error('Not authenticated') };
+  const userCreatedAt = user.created_at ? new Date(user.created_at).getTime() : 0;
+
   const { data, error } = await supabase
     .from('notifications')
     .select('id, title, body, created_at, created_by, target_type, target_user_ids')
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) return { data: [], error };
-  return { data: (data ?? []) as NotificationRow[], error: null };
+  const list = (data ?? []) as NotificationRow[];
+  const filtered = list.filter((n) => new Date(n.created_at).getTime() >= userCreatedAt);
+  return { data: filtered, error: null };
 }
 
 /** Read notification ids for current user. */
