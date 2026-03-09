@@ -10,7 +10,9 @@ const SMTP_PORT = parseInt(process.env.SMTP_PORT?.trim() || '587', 10);
 const SMTP_SECURE = SMTP_PORT === 465;
 const SMTP_USER = process.env.SMTP_USER?.trim();
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD != null ? String(process.env.SMTP_PASSWORD).trim() : undefined;
-const DEFAULT_FROM = (process.env.SMTP_FROM || 'Yazu.digital <noreply@yazu.digital>').trim();
+// SMTP_FROM: full "Display Name <email@domain.com>" or just display name (then SMTP_USER is used as email)
+const _fromRaw = (process.env.SMTP_FROM || 'Yazu.digital').trim();
+const DEFAULT_FROM = _fromRaw.includes('<') ? _fromRaw : `${_fromRaw} <${SMTP_USER || 'noreply@yazu.digital'}>`;
 
 /** E-postada base64 görseller uzun kod gibi görünür; img src'deki data: URL'leri kaldırır (boş bırakır). */
 export function stripDataUrlsFromHtml(html) {

@@ -3,7 +3,7 @@
  * GET /api/confirm-email?token=xxx
  */
 import { createClient } from '@supabase/supabase-js';
-import { sendTemplatedEmail } from './lib/emailHelpers.js';
+import { sendTemplatedEmail } from '../server-lib/emailHelpers.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

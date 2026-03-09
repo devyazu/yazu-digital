@@ -4,7 +4,7 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import { getTemplate, sendTemplatedEmail, sendMail, replacePlaceholders } from './lib/emailHelpers.js';
+import { getTemplate, sendTemplatedEmail, sendMail, replacePlaceholders } from '../server-lib/emailHelpers.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
