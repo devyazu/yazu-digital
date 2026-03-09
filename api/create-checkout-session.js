@@ -12,8 +12,6 @@ import { getPriceIdForTier } from '../server-lib/stripeConfig.js';
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const appUrl = process.env.APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
-
 function send(res, status, body) {
   if (typeof res?.setHeader === 'function') res.setHeader('Content-Type', 'application/json');
   return res.status(status).json(body);
@@ -44,6 +42,10 @@ export default async function handler(req, res) {
 
   const targetTier = body.targetTier === 'premium' ? 'premium' : body.targetTier === 'basic' ? 'basic' : 'pro';
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Use request origin so redirect goes back to where the user came from (e.g. app.yazu.digital), not Vercel deployment URL
+  const origin = (req.headers.origin || req.headers.Origin || '').toString().replace(/\/$/, '');
+  const baseUrl = origin && /^https:\/\//.test(origin) ? origin : (process.env.APP_URL || '').replace(/\/$/, '') || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
   let priceId = null;
   const { data: dbProduct } = await supabase
@@ -78,7 +80,7 @@ export default async function handler(req, res) {
         proration_behavior: 'always_invoice',
         payment_behavior: 'pending_if_incomplete',
       });
-      return send(res, 200, { updated: true, url: `${appUrl}/?billing=updated` });
+      return send(res, 200, { updated: true, url: `${baseUrl}/?billing=updated` });
     }
 
     let customerId = profile.stripe_customer_id;
@@ -95,8 +97,8 @@ export default async function handler(req, res) {
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/?checkout=cancelled`,
+      success_url: `${baseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/?checkout=cancelled`,
       client_reference_id: userId,
       subscription_data: {
         metadata: { supabase_user_id: userId },
@@ -108,6 +110,12 @@ export default async function handler(req, res) {
     return send(res, 200, { url: session.url });
   } catch (err) {
     console.error('Stripe error:', err);
+    const msg = err?.message || '';
+    if (msg.includes('test mode key') && msg.includes('live mode')) {
+      return send(res, 400, {
+        error: 'Stripe test/live uyumsuzluğu: Vercel\'de test anahtarı (sk_test_...) kullanıyorsunuz ama paketler canlı modda oluşturulmuş. Çözüm: Stripe Dashboard\'da Test moduna geçin, Admin → Packages\'ta ilgili paketleri silip yeniden ekleyin (test fiyat ID\'leri oluşur). Veya canlı ödeme için Vercel\'de canlı Stripe anahtarı kullanın.',
+      });
+    }
     return send(res, 500, { error: err.message || 'Payment setup failed' });
   }
 }

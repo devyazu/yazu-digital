@@ -67,6 +67,8 @@ Bu kadar. Ürün/fiyatı admin panelinden ekleyeceğiniz için Stripe’da ayrı
 - `APP_URL` – Uygulamanın canlı adresi (örn. `https://app.yazu.digital`). Vermezseniz Vercel kendi URL’ini kullanır.
 - `SUPABASE_ANON_KEY` veya `VITE_SUPABASE_ANON_KEY` – Zaten varsa dokunmayın.
 
+**Stripe ödeme sonrası yönlendirme:** `APP_URL` yoksa kullanıcı Vercel deployment URL’ine (örn. yazu-digital-xxx.vercel.app) gider; orada giriş koruması varsa Vercel login çıkar. Production’da mutlaka `APP_URL=https://app.yazu.digital` (kendi domain’iniz) ekleyin.
+
 ### C3. Deploy
 
 1. **Deployments** sekmesine gidin.
