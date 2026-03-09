@@ -60,6 +60,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const [editUserForm, setEditUserForm] = useState<Partial<AdminUserRow> & { is_admin?: boolean }>({});
   const [editUserSaving, setEditUserSaving] = useState(false);
   const [editUserError, setEditUserError] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [notificationsList, setNotificationsList] = useState<Array<{ id: string; title: string; body: string; created_at: string; target_type: string; target_user_ids: string[] | null }>>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notifTitle, setNotifTitle] = useState('');
@@ -84,6 +85,7 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
   const [editSubscriptionProductForm, setEditSubscriptionProductForm] = useState<{ name: string; price_amount_cents: string; currency: string; is_active: boolean }>({ name: '', price_amount_cents: '', currency: 'usd', is_active: true });
   const [editSubscriptionProductSaving, setEditSubscriptionProductSaving] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   
   useEffect(() => {
     if ((activeTab !== 'users' && activeTab !== 'notifications') || !session?.access_token) return;
@@ -303,6 +305,26 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
       is_admin: u.is_admin,
     });
     setEditUserError(null);
+  };
+
+  const handleDeleteUser = async (user: AdminUserRow) => {
+    if (!session?.access_token || !window.confirm(`Delete user "${user.email}"? This will permanently remove their account and cannot be undone.`)) return;
+    setDeletingUserId(user.id);
+    setUsersError(null);
+    try {
+      const r = await fetch('/api/admin/delete-user', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ user_id: user.id }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || data?.detail || `Error ${r.status}`);
+      setRealUsers((prev) => prev.filter((u) => u.id !== user.id));
+    } catch (e) {
+      setUsersError(e?.message || 'Failed to delete user.');
+    } finally {
+      setDeletingUserId(null);
+    }
   };
 
   const saveEditUser = async () => {
@@ -604,14 +626,25 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                     </span>
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => openEditUser(user)}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                      title="Edit user"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openEditUser(user)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                        title="Edit user"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={deletingUserId === user.id}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        title="Delete user"
+                      >
+                        {deletingUserId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -844,6 +877,25 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
         .finally(() => setEditSubscriptionProductSaving(false));
     };
 
+    const handleDeleteProduct = (id: string, name: string) => {
+      if (!session?.access_token || !window.confirm(`Delete package "${name}"? This cannot be undone.`)) return;
+      setDeletingProductId(id);
+      setSubscriptionProductsError(null);
+      fetch('/api/admin/subscription-products', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ id }),
+      })
+        .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data?.error || `Error ${r.status}`);
+          return data;
+        })
+        .then(() => setSubscriptionProducts((prev) => prev.filter((p) => p.id !== id)))
+        .catch((e) => setSubscriptionProductsError(e?.message || 'Failed to delete.'))
+        .finally(() => setDeletingProductId(null));
+    };
+
     return (
       <div className="space-y-6 animate-in fade-in">
         <div className="flex items-center justify-between">
@@ -949,9 +1001,12 @@ const AdminView: React.FC<AdminViewProps> = ({ categories, setCategories, onExit
                     <td className="px-4 py-3">{(p.price_amount_cents / 100).toFixed(2)} {p.currency}</td>
                     <td className="px-4 py-3 font-mono text-xs text-stone-500">{p.stripe_price_id || '—'}</td>
                     <td className="px-4 py-3">{p.is_active ? <span className="text-green-600">Active</span> : <span className="text-stone-400">Inactive</span>}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 flex items-center gap-2">
                       <button type="button" onClick={() => { setEditingSubscriptionProduct(p); setEditSubscriptionProductForm({ name: p.name, price_amount_cents: String(p.price_amount_cents / 100), currency: p.currency, is_active: p.is_active }); }} className="text-brand-600 hover:underline flex items-center gap-1">
                         <Pencil className="w-3 h-3" /> Edit
+                      </button>
+                      <button type="button" onClick={() => handleDeleteProduct(p.id, p.name)} disabled={deletingProductId === p.id} className="text-red-600 hover:underline flex items-center gap-1 disabled:opacity-50" title="Delete package">
+                        {deletingProductId === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} Delete
                       </button>
                     </td>
                   </tr>

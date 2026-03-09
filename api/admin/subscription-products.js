@@ -16,12 +16,12 @@ function send(res, status, body) {
 export default async function handler(req, res) {
   if (res?.setHeader) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
   const method = req?.method ?? req?.headers?.['x-vercel-forwarded-method'];
   if (method === 'OPTIONS') return res.status(200).end();
-  if (!['GET', 'POST', 'PUT'].includes(method)) return send(res, 405, { error: 'Method not allowed' });
+  if (!['GET', 'POST', 'PUT', 'DELETE'].includes(method)) return send(res, 405, { error: 'Method not allowed' });
 
   const authResult = await requireAdmin(req, res);
   if (!authResult) return;
@@ -44,6 +44,23 @@ export default async function handler(req, res) {
       return send(res, 500, { error: 'Failed to list products', detail: error?.message });
     }
     return send(res, 200, { products: data ?? [] });
+  }
+
+  if (method === 'DELETE') {
+    let body;
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    } catch {
+      return send(res, 400, { error: 'Invalid JSON body' });
+    }
+    const id = body.id || req.query?.id;
+    if (!id || typeof id !== 'string') return send(res, 400, { error: 'id is required' });
+    const { error } = await supabaseAdmin.from('subscription_products').delete().eq('id', id);
+    if (error) {
+      console.error('subscription_products delete error:', error);
+      return send(res, 500, { error: 'Failed to delete product', detail: error?.message });
+    }
+    return send(res, 200, { ok: true });
   }
 
   let body;

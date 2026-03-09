@@ -53,7 +53,8 @@ export default function EmailConfirmGate({ userId, onSignOut, children }: EmailC
     setResendError(null);
     setResendLoading(true);
     try {
-      const r = await fetch('/api/send-confirm-email', {
+      const base = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
+      const r = await fetch(`${base}/api/send-confirm-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, email: undefined }),

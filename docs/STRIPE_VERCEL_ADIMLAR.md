@@ -95,3 +95,18 @@ Bu adımlar tamamlandığında admin’deki paketler ve fiyatlar, Stripe ve Verc
   - CVC: herhangi 3 rakam (örn. 123)
   - Ülke / posta kodu: istediğiniz geçerli değer
 - Ödeme adımını test etmek için `/start` sayfasından "Paket seç" → kayıt ol → giriş sonrası otomatik Stripe Checkout'a yönlendirilir; burada yukarıdaki test kartıyla deneyebilirsiniz.
+
+---
+
+## F. "No such price... test mode key was used" hatası
+
+Bu uyarı, Vercel'de **test** Stripe anahtarı (`sk_test_...`) kullanırken veritabanındaki paketlerin **canlı (live)** modda oluşturulmuş `stripe_price_id` değerine sahip olmasından kaynaklanır. Test ve canlı modda fiyat ID'leri birbirinden farklıdır.
+
+**Çözüm (test ile devam etmek istiyorsanız):**
+
+1. Stripe Dashboard'da **Test mode**'un açık olduğundan emin olun.
+2. Uygulama Admin → **Packages** bölümüne gidin.
+3. Mevcut paketleri silin veya yeni paketler ekleyin. Kaydettiğinizde sistem Stripe **test** modunda yeni Product + Price oluşturur ve test `stripe_price_id` veritabanına yazılır.
+4. Artık checkout test anahtarı ile bu fiyatlarla çalışır.
+
+**Alternatif:** Canlı ödeme alacaksanız Stripe'da **Live** moda geçin, Vercel'de `STRIPE_SECRET_KEY` ve webhook secret'ı **canlı** değerlerle güncelleyin, redeploy yapın. Bu durumda veritabanındaki mevcut (live) price ID'leri kullanılır.
