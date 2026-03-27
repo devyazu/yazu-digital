@@ -3,7 +3,6 @@
  * API anahtarı yalnızca sunucu tarafında (yerel server.js veya Vercel Function) kullanılır.
  */
 const API_GENERATE = '/api/generate';
-const API_TOOL_RUN = '/api/tools/run';
 
 export const generateContent = async (
   prompt: string,
@@ -47,13 +46,14 @@ export const runTool = async (params: {
   brandId?: string;
 }): Promise<{ data: ToolRunResult | null; error: string | null }> => {
   try {
-    const res = await fetch(API_TOOL_RUN, {
+    const res = await fetch(API_GENERATE, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${params.token}`,
       },
       body: JSON.stringify({
+        action: 'tool-run',
         toolId: params.toolId,
         input: params.input,
         brandId: params.brandId || null,
