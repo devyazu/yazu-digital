@@ -21,22 +21,42 @@ export default function EmailConfirmGate({ userId, onSignOut, children }: EmailC
   const [resendError, setResendError] = useState<string | null>(null);
 
   const loadProfile = React.useCallback(() => {
-    getProfile(userId).then(({ profile: p }) => {
-      setProfile(p ?? null);
-      setLoading(false);
-    });
+    setLoading(true);
+    const failSafeTimer = window.setTimeout(() => setLoading(false), 10000);
+    getProfile(userId)
+      .then(({ profile: p }) => {
+        setProfile(p ?? null);
+      })
+      .catch(() => {
+        setProfile(null);
+      })
+      .finally(() => {
+        window.clearTimeout(failSafeTimer);
+        setLoading(false);
+      });
   }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getProfile(userId).then(({ profile: p }) => {
-      if (!cancelled) {
-        setProfile(p ?? null);
-        setLoading(false);
-      }
-    });
-    return () => { cancelled = true; };
+    const failSafeTimer = window.setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 10000);
+    getProfile(userId)
+      .then(({ profile: p }) => {
+        if (!cancelled) setProfile(p ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setProfile(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+        window.clearTimeout(failSafeTimer);
+      });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(failSafeTimer);
+    };
   }, [userId]);
 
   // Refetch when user returns from confirm link (?confirm=ok)

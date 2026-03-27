@@ -41,6 +41,14 @@ function useSupabaseForAuth() {
   return isAdmin ? supabaseAdmin : supabaseMain;
 }
 
+function normalizeAuthError(error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error ?? 'Unknown auth error');
+  if (/failed to fetch|networkerror|network request failed/i.test(message)) {
+    return new Error('Baglanti hatasi: Supabase endpointine ulasilamadi. VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY ve ag baglantisini kontrol edin.');
+  }
+  return error instanceof Error ? error : new Error(message);
+}
+
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
@@ -64,25 +72,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return;
     }
+    let active = true;
     setLoading(true);
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    const failSafeTimer = window.setTimeout(() => {
+      if (active) setLoading(false);
+    }, 10000);
+    supabase.auth.getSession()
+      .then(({ data: { session: s } }) => {
+        if (!active) return;
+        setSession(s);
+        setUser(s?.user ?? null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setSession(null);
+        setUser(null);
+      })
+      .finally(() => {
+        if (!active) return;
+        window.clearTimeout(failSafeTimer);
+        setLoading(false);
+      });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (!active) return;
       setSession(s);
       setUser(s?.user ?? null);
       setLoading(false);
     });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      window.clearTimeout(failSafeTimer);
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) return { error: new Error('Supabase not configured') };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ?? null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error: error ?? null };
+    } catch (e) {
+      return { error: normalizeAuthError(e) };
+    }
   };
 
   const signUp = async (email: string, password: string) => {
