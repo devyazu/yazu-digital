@@ -6,13 +6,14 @@ export async function connectWooCommerce(params: {
   consumerSecret: string;
 }): Promise<{ ok: boolean; error?: string; siteUrl?: string }> {
   try {
-    const res = await fetch('/api/woocommerce/connect', {
+    const res = await fetch('/api/woocommerce', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${params.token}`,
       },
       body: JSON.stringify({
+        action: 'connect',
         workspaceId: params.workspaceId,
         siteUrl: params.siteUrl,
         consumerKey: params.consumerKey,
@@ -32,13 +33,13 @@ export async function syncWooCommerce(params: {
   workspaceId: string;
 }): Promise<{ ok: boolean; error?: string; products?: number; orders?: number; lastSync?: string }> {
   try {
-    const res = await fetch('/api/woocommerce/sync', {
+    const res = await fetch('/api/woocommerce', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${params.token}`,
       },
-      body: JSON.stringify({ workspaceId: params.workspaceId }),
+      body: JSON.stringify({ action: 'sync', workspaceId: params.workspaceId }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: data?.error || 'WooCommerce sync failed' };
