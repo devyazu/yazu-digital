@@ -115,6 +115,19 @@ export async function updateBrand(
   return { data: rowToBrand(data as WorkspaceRow), error: null };
 }
 
+export async function deleteBrand(
+  userId: string,
+  workspaceId: string
+): Promise<{ error: Error | null }> {
+  if (!supabase) return { error: new Error('Supabase not configured') };
+  const { error } = await supabase
+    .from('workspaces')
+    .delete()
+    .eq('id', workspaceId)
+    .eq('user_id', userId);
+  return { error: error ?? null };
+}
+
 export async function uploadBrandLogo(
   workspaceId: string,
   userId: string,

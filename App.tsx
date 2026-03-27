@@ -21,9 +21,10 @@ import ChatArchiveView from './components/ChatArchiveView';
 import NotificationsPanel from './components/NotificationsPanel';
 import { CATEGORIES as INITIAL_CATEGORIES } from './data';
 import { Tool, Brand, Category, SalesAgentConfig, UserProfile, userTierCanAccessTool, TIER_DEFAULTS } from './types';
-import { getBrands, createBrand, uploadBrandLogo, updateBrand } from './services/brandService';
+import { getBrands, createBrand, uploadBrandLogo, updateBrand, deleteBrand } from './services/brandService';
 import { getProfile, getFavoriteToolIds, updateFavoriteToolIds, type Profile } from './services/profileService';
 import { getUnreadNotificationCount } from './services/notificationsService';
+import { connectWooCommerce, syncWooCommerce } from './services/woocommerceService';
 
 function filterCategoriesBySearch(categories: Category[], query: string): Category[] {
   const q = query.trim().toLowerCase();
@@ -143,6 +144,22 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const [brandsLoading, setBrandsLoading] = useState(true);
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [managingBrand, setManagingBrand] = useState<Brand | null>(null);
+
+  const refreshBrands = useCallback(() => {
+    if (!authUser?.id) return;
+    getBrands(authUser.id).then(({ data, error }) => {
+      if (error) return;
+      setBrands(data);
+      setCurrentBrand((prev) => {
+        if (!prev) return data[0] ?? null;
+        return data.find((b) => b.id === prev.id) ?? data[0] ?? null;
+      });
+      setManagingBrand((prev) => {
+        if (!prev) return null;
+        return data.find((b) => b.id === prev.id) ?? null;
+      });
+    });
+  }, [authUser?.id]);
 
   useEffect(() => {
     if (!authUser) return;
@@ -362,6 +379,43 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
     return { ok: true };
   };
 
+  const handleDeleteBrand = async (brandId: string) => {
+    if (!authUser) return { ok: false, error: 'Oturum bulunamadi.' };
+    const { error } = await deleteBrand(authUser.id, brandId);
+    if (error) return { ok: false, error: error.message || 'Marka silinemedi.' };
+    const remaining = brands.filter((b) => b.id !== brandId);
+    setBrands(remaining);
+    if (currentBrand?.id === brandId) setCurrentBrand(remaining[0] ?? null);
+    if (managingBrand?.id === brandId) setManagingBrand(null);
+    setView('brands-list');
+    setBrandActionMessage('Marka silindi.');
+    return { ok: true };
+  };
+
+  const handleConnectWoo = async (brandId: string, payload: { siteUrl: string; consumerKey: string; consumerSecret: string }) => {
+    if (!session?.access_token) return { ok: false, error: 'Session bulunamadi.' };
+    const result = await connectWooCommerce({
+      token: session.access_token,
+      workspaceId: brandId,
+      siteUrl: payload.siteUrl,
+      consumerKey: payload.consumerKey,
+      consumerSecret: payload.consumerSecret,
+    });
+    if (!result.ok) return { ok: false, error: result.error || 'Woo baglantisi basarisiz.' };
+    refreshBrands();
+    setBrandActionMessage('WooCommerce baglandi.');
+    return { ok: true };
+  };
+
+  const handleSyncWoo = async (brandId: string) => {
+    if (!session?.access_token) return { ok: false, error: 'Session bulunamadi.' };
+    const result = await syncWooCommerce({ token: session.access_token, workspaceId: brandId });
+    if (!result.ok) return { ok: false, error: result.error || 'Woo sync basarisiz.' };
+    refreshBrands();
+    setBrandActionMessage(`WooCommerce sync tamamlandi (${result.products ?? 0} urun, ${result.orders ?? 0} siparis).`);
+    return { ok: true, products: result.products, orders: result.orders };
+  };
+
   // Update Sales Agent Config
   const handleUpdateSalesAgent = (config: SalesAgentConfig) => {
     if (!currentBrand) return;
@@ -490,6 +544,9 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
             brand={managingBrand} 
             onBack={() => setView('brands-list')}
             onSaveBrand={handleSaveBrandDetails}
+            onDeleteBrand={handleDeleteBrand}
+            onConnectWoo={handleConnectWoo}
+            onSyncWoo={handleSyncWoo}
           />
         )}
 

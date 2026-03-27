@@ -3,13 +3,16 @@ import { Brand } from '../types';
 import { 
   CheckCircle, XCircle, RefreshCw, Plus, 
   ShoppingBag, BarChart2, Facebook, Search, Mail, 
-  Link, AlertCircle, ArrowLeft, Layers, Globe, MessageSquare, Video, Filter
+  Link, AlertCircle, ArrowLeft, Layers, Globe, MessageSquare, Video, Filter, Trash2
 } from 'lucide-react';
 
 interface BrandConnectViewProps {
   brand: Brand;
   onBack: () => void;
   onSaveBrand: (brandId: string, payload: { name: string; website: string }) => Promise<{ ok: boolean; error?: string }>;
+  onDeleteBrand: (brandId: string) => Promise<{ ok: boolean; error?: string }>;
+  onConnectWoo: (brandId: string, payload: { siteUrl: string; consumerKey: string; consumerSecret: string }) => Promise<{ ok: boolean; error?: string }>;
+  onSyncWoo: (brandId: string) => Promise<{ ok: boolean; error?: string; products?: number; orders?: number }>;
 }
 
 // Mock Categories of Tools
@@ -42,17 +45,23 @@ const ALL_INTEGRATIONS = [
     { id: 'pinterest', name: 'Pinterest Ads', category: 'ads', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Pinterest-logo.png/600px-Pinterest-logo.png', desc: 'Visual discovery ads.' },
 ];
 
-const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack, onSaveBrand }) => {
+const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack, onSaveBrand, onDeleteBrand, onConnectWoo, onSyncWoo }) => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [name, setName] = useState(brand.name);
   const [website, setWebsite] = useState(brand.website);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [wooSiteUrl, setWooSiteUrl] = useState(brand.website || '');
+  const [wooConsumerKey, setWooConsumerKey] = useState('');
+  const [wooConsumerSecret, setWooConsumerSecret] = useState('');
+  const [wooBusy, setWooBusy] = useState(false);
 
   React.useEffect(() => {
     setName(brand.name);
     setWebsite(brand.website);
+    setWooSiteUrl(brand.website || '');
     setStatus(null);
   }, [brand.id, brand.name, brand.website]);
 
@@ -75,6 +84,49 @@ const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack, onSa
       return;
     }
     setStatus('Marka bilgileri kaydedildi.');
+  };
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm(`"${brand.name}" markasini silmek istedigine emin misin?`);
+    if (!confirmed) return;
+    setIsDeleting(true);
+    const result = await onDeleteBrand(brand.id);
+    setIsDeleting(false);
+    if (!result.ok) {
+      setStatus(result.error || 'Marka silinemedi.');
+      return;
+    }
+    onBack();
+  };
+
+  const handleWooConnect = async () => {
+    setWooBusy(true);
+    setStatus(null);
+    const result = await onConnectWoo(brand.id, {
+      siteUrl: wooSiteUrl,
+      consumerKey: wooConsumerKey,
+      consumerSecret: wooConsumerSecret,
+    });
+    setWooBusy(false);
+    if (!result.ok) {
+      setStatus(result.error || 'WooCommerce baglantisi basarisiz.');
+      return;
+    }
+    setWooConsumerKey('');
+    setWooConsumerSecret('');
+    setStatus('WooCommerce baglandi. Simdi "Sync data" ile urun ve siparisleri cekebilirsin.');
+  };
+
+  const handleWooSync = async () => {
+    setWooBusy(true);
+    setStatus(null);
+    const result = await onSyncWoo(brand.id);
+    setWooBusy(false);
+    if (!result.ok) {
+      setStatus(result.error || 'WooCommerce sync basarisiz.');
+      return;
+    }
+    setStatus(`WooCommerce sync tamamlandi. Products: ${result.products ?? 0}, Orders: ${result.orders ?? 0}`);
   };
 
   return (
@@ -129,7 +181,70 @@ const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack, onSa
             >
               {saving ? 'Saving...' : 'Save brand'}
             </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-60 inline-flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              {isDeleting ? 'Deleting...' : 'Delete brand'}
+            </button>
             {status && <p className="text-sm text-stone-600">{status}</p>}
+          </div>
+        </div>
+
+        <div className="bg-white border border-stone-200 rounded-2xl p-5 mb-6">
+          <h3 className="text-lg font-bold text-stone-800 mb-2">WooCommerce Connection</h3>
+          <p className="text-sm text-stone-500 mb-4">Site, product, order ve ilgili tum ham datalarin senkronu icin Woo API bilgilerini gir.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="text-sm text-stone-600">
+              <span className="block mb-1 font-medium">Site URL</span>
+              <input
+                value={wooSiteUrl}
+                onChange={(e) => setWooSiteUrl(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400"
+                placeholder="https://example.com"
+              />
+            </label>
+            <label className="text-sm text-stone-600">
+              <span className="block mb-1 font-medium">Consumer Key</span>
+              <input
+                value={wooConsumerKey}
+                onChange={(e) => setWooConsumerKey(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400"
+                placeholder="ck_..."
+              />
+            </label>
+            <label className="text-sm text-stone-600 md:col-span-2">
+              <span className="block mb-1 font-medium">Consumer Secret</span>
+              <input
+                value={wooConsumerSecret}
+                onChange={(e) => setWooConsumerSecret(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400"
+                placeholder="cs_..."
+                type="password"
+              />
+            </label>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleWooConnect}
+              disabled={wooBusy || !wooSiteUrl.trim() || !wooConsumerKey.trim() || !wooConsumerSecret.trim()}
+              className="px-4 py-2 bg-stone-900 text-white text-sm font-semibold rounded-lg hover:bg-stone-800 disabled:opacity-60"
+            >
+              {wooBusy ? 'Connecting...' : 'Connect WooCommerce'}
+            </button>
+            <button
+              type="button"
+              onClick={handleWooSync}
+              disabled={wooBusy}
+              className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-lg hover:bg-brand-700 disabled:opacity-60 inline-flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${wooBusy ? 'animate-spin' : ''}`} />
+              Sync data
+            </button>
           </div>
         </div>
 
@@ -185,18 +300,31 @@ const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack, onSa
                         <h3 className="font-bold text-stone-800 text-lg mb-1">{app.name}</h3>
                         <p className="text-xs text-stone-500 leading-relaxed mb-6 flex-1">{app.desc}</p>
                         
-                        <button
+                        {app.id === 'woo' ? (
+                          <button
                             type="button"
-                            disabled
+                            onClick={connected ? handleWooSync : handleWooConnect}
+                            disabled={wooBusy || (!connected && (!wooSiteUrl.trim() || !wooConsumerKey.trim() || !wooConsumerSecret.trim()))}
                             className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all ${
-                                connected
-                                ? 'bg-white border border-stone-200 text-stone-500'
-                                : 'bg-stone-200 text-stone-500'
-                            }`}
-                            title="Gercek entegrasyon baglantisi sonraki fazda acilacak"
-                        >
-                            {connected ? 'Connected' : 'Coming soon'}
-                        </button>
+                              connected ? 'bg-brand-600 text-white hover:bg-brand-700' : 'bg-stone-900 text-white hover:bg-stone-800'
+                            } disabled:opacity-60`}
+                          >
+                            {wooBusy ? 'Processing...' : connected ? 'Sync now' : 'Connect'}
+                          </button>
+                        ) : (
+                          <button
+                              type="button"
+                              disabled
+                              className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all ${
+                                  connected
+                                  ? 'bg-white border border-stone-200 text-stone-500'
+                                  : 'bg-stone-200 text-stone-500'
+                              }`}
+                              title="Gercek entegrasyon baglantisi sonraki fazda acilacak"
+                          >
+                              {connected ? 'Connected' : 'Coming soon'}
+                          </button>
+                        )}
                     </div>
                 );
             })}
