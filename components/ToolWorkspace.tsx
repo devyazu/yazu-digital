@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tool, Brand } from '../types';
 import { Copy, RefreshCw, Zap, Sparkles, Save, ArrowLeft, Database, Paperclip, Image as ImageIcon, X, FileText, Info } from 'lucide-react';
-import { generateContent } from '../services/geminiService';
+import { generateContent, runTool } from '../services/geminiService';
 import { saveToChatArchive } from '../services/chatArchive';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,7 +12,7 @@ interface ToolWorkspaceProps {
 }
 
 const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ tool, brand, onBack }) => {
-  const { user: authUser } = useAuth();
+  const { user: authUser, session } = useAuth();
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +72,40 @@ const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({ tool, brand, onBack }) =>
         finalPrompt += `\n\n[Attached Files: ${attachedFiles.map(f => f.name).join(', ')} - Note: File analysis simulation]`;
       }
 
-      const result = await generateContent(finalPrompt, finalSystemInstruction);
+      let result = '';
+      if (tool.id === 'copy-1') {
+        if (!session?.access_token) {
+          setError('Session is missing. Please sign in again.');
+          return;
+        }
+        const run = await runTool({
+          token: session.access_token,
+          toolId: tool.id,
+          input: finalPrompt,
+          brandId: brand.id,
+        });
+        if (run.error || !run.data) {
+          setError(run.error || 'Tool run failed');
+          return;
+        }
+        const payload = run.data.output as {
+          hooks?: Array<{ hook: string; trigger: string; reason: string }>;
+          scriptOpeners?: Array<{ line: string; style: string }>;
+        };
+        const hooks = Array.isArray(payload?.hooks) ? payload.hooks : [];
+        const scriptOpeners = Array.isArray(payload?.scriptOpeners) ? payload.scriptOpeners : [];
+        const hookLines = hooks.map((h, idx) => `${idx + 1}. ${h.hook}\n   - Trigger: ${h.trigger}\n   - Why: ${h.reason}`);
+        const openerLines = scriptOpeners.map((s, idx) => `${idx + 1}. [${s.style}] ${s.line}`);
+        result = [
+          'Viral Hooks (10)',
+          hookLines.join('\n'),
+          '',
+          'Script Openers (3)',
+          openerLines.join('\n'),
+        ].join('\n');
+      } else {
+        result = await generateContent(finalPrompt, finalSystemInstruction);
+      }
       setOutput(result);
       if (authUser) {
         saveToChatArchive({

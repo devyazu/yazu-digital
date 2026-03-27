@@ -9,6 +9,7 @@ import {
 interface BrandConnectViewProps {
   brand: Brand;
   onBack: () => void;
+  onSaveBrand: (brandId: string, payload: { name: string; website: string }) => Promise<{ ok: boolean; error?: string }>;
 }
 
 // Mock Categories of Tools
@@ -41,20 +42,40 @@ const ALL_INTEGRATIONS = [
     { id: 'pinterest', name: 'Pinterest Ads', category: 'ads', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Pinterest-logo.png/600px-Pinterest-logo.png', desc: 'Visual discovery ads.' },
 ];
 
-const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack }) => {
+const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack, onSaveBrand }) => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [name, setName] = useState(brand.name);
+  const [website, setWebsite] = useState(brand.website);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    setName(brand.name);
+    setWebsite(brand.website);
+    setStatus(null);
+  }, [brand.id, brand.name, brand.website]);
 
   // Determine connected status based on mock brand data (simplified matching)
-  const isConnected = (id: string) => {
-      return brand.integrations.some(i => i.id.includes(id) && i.isConnected);
-  };
+  const isConnected = (id: string) => brand.integrations.some((i) => i.id === id && i.isConnected);
 
   const filteredApps = ALL_INTEGRATIONS.filter(app => {
       const matchesCategory = activeCategory === 'all' || app.category === activeCategory;
       const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
   });
+
+  const handleSave = async () => {
+    setStatus(null);
+    setSaving(true);
+    const result = await onSaveBrand(brand.id, { name, website });
+    setSaving(false);
+    if (!result.ok) {
+      setStatus(result.error || 'Marka guncellenemedi.');
+      return;
+    }
+    setStatus('Marka bilgileri kaydedildi.');
+  };
 
   return (
     <div className="flex-1 h-[calc(100vh-64px)] overflow-y-auto bg-[#FAFAF9] p-6 lg:p-10 scroll-smooth">
@@ -76,6 +97,40 @@ const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack }) =>
               <h1 className="text-3xl font-bold text-stone-800 mb-1">{brand.name} Operating System</h1>
               <p className="text-stone-500">Connect your marketing stack to enable <span className="font-semibold text-brand-600">Smart AI Agents</span>.</p>
            </div>
+        </div>
+
+        <div className="bg-white border border-stone-200 rounded-2xl p-5 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="text-sm text-stone-600">
+              <span className="block mb-1 font-medium">Brand name</span>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400"
+                placeholder="Brand name"
+              />
+            </label>
+            <label className="text-sm text-stone-600">
+              <span className="block mb-1 font-medium">Website</span>
+              <input
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400"
+                placeholder="example.com"
+              />
+            </label>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-stone-900 text-white text-sm font-semibold rounded-lg hover:bg-stone-800 disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Save brand'}
+            </button>
+            {status && <p className="text-sm text-stone-600">{status}</p>}
+          </div>
         </div>
 
         {/* Toolbar */}
@@ -130,14 +185,17 @@ const BrandConnectView: React.FC<BrandConnectViewProps> = ({ brand, onBack }) =>
                         <h3 className="font-bold text-stone-800 text-lg mb-1">{app.name}</h3>
                         <p className="text-xs text-stone-500 leading-relaxed mb-6 flex-1">{app.desc}</p>
                         
-                        <button 
+                        <button
+                            type="button"
+                            disabled
                             className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all ${
-                                connected 
-                                ? 'bg-white border border-stone-200 text-stone-500 hover:text-red-500 hover:border-red-200' 
-                                : 'bg-stone-900 text-white hover:bg-brand-600 shadow-md hover:shadow-lg'
+                                connected
+                                ? 'bg-white border border-stone-200 text-stone-500'
+                                : 'bg-stone-200 text-stone-500'
                             }`}
+                            title="Gercek entegrasyon baglantisi sonraki fazda acilacak"
                         >
-                            {connected ? 'Manage Connection' : 'Connect'}
+                            {connected ? 'Connected' : 'Coming soon'}
                         </button>
                     </div>
                 );

@@ -33,6 +33,32 @@ function rowToBrand(row: WorkspaceRow): Brand {
   };
 }
 
+function normalizeWebsite(website: string): string {
+  const raw = String(website || '').trim();
+  if (!raw) return '';
+  return raw
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/\/+$/, '')
+    .trim()
+    .toLowerCase();
+}
+
+async function hasDuplicateBrand(userId: string, name: string, excludeId?: string): Promise<boolean> {
+  if (!supabase) return false;
+  const normalized = name.trim().toLowerCase();
+  if (!normalized) return false;
+  const { data, error } = await supabase
+    .from('workspaces')
+    .select('id, name')
+    .eq('user_id', userId);
+  if (error || !Array.isArray(data)) return false;
+  return data.some((row) => {
+    const sameId = excludeId && row.id === excludeId;
+    return !sameId && String(row.name || '').trim().toLowerCase() === normalized;
+  });
+}
+
 export async function getBrands(userId: string): Promise<{ data: Brand[]; error: Error | null }> {
   if (!supabase) return { data: [], error: new Error('Supabase not configured') };
   const { data, error } = await supabase
@@ -50,13 +76,39 @@ export async function createBrand(
   payload: { name?: string; website?: string }
 ): Promise<{ data: Brand | null; error: Error | null }> {
   if (!supabase) return { data: null, error: new Error('Supabase not configured') };
+  const cleanName = String(payload.name ?? '').trim() || 'New Brand';
+  const cleanWebsite = normalizeWebsite(String(payload.website ?? ''));
+  const duplicate = await hasDuplicateBrand(userId, cleanName);
+  if (duplicate) return { data: null, error: new Error('Bu marka adi zaten mevcut') };
   const { data, error } = await supabase
     .from('workspaces')
     .insert({
       user_id: userId,
-      name: payload.name ?? 'New Brand',
-      website: payload.website ?? '',
+      name: cleanName,
+      website: cleanWebsite,
     })
+    .select()
+    .single();
+  if (error) return { data: null, error };
+  return { data: rowToBrand(data as WorkspaceRow), error: null };
+}
+
+export async function updateBrand(
+  userId: string,
+  workspaceId: string,
+  payload: { name?: string; website?: string }
+): Promise<{ data: Brand | null; error: Error | null }> {
+  if (!supabase) return { data: null, error: new Error('Supabase not configured') };
+  const cleanName = String(payload.name ?? '').trim();
+  if (!cleanName) return { data: null, error: new Error('Marka adi bos olamaz') };
+  const duplicate = await hasDuplicateBrand(userId, cleanName, workspaceId);
+  if (duplicate) return { data: null, error: new Error('Bu marka adi zaten mevcut') };
+  const cleanWebsite = normalizeWebsite(String(payload.website ?? ''));
+  const { data, error } = await supabase
+    .from('workspaces')
+    .update({ name: cleanName, website: cleanWebsite })
+    .eq('id', workspaceId)
+    .eq('user_id', userId)
     .select()
     .single();
   if (error) return { data: null, error };

@@ -21,7 +21,7 @@ import ChatArchiveView from './components/ChatArchiveView';
 import NotificationsPanel from './components/NotificationsPanel';
 import { CATEGORIES as INITIAL_CATEGORIES } from './data';
 import { Tool, Brand, Category, SalesAgentConfig, UserProfile, userTierCanAccessTool, TIER_DEFAULTS } from './types';
-import { getBrands, createBrand, uploadBrandLogo } from './services/brandService';
+import { getBrands, createBrand, uploadBrandLogo, updateBrand } from './services/brandService';
 import { getProfile, getFavoriteToolIds, updateFavoriteToolIds, type Profile } from './services/profileService';
 import { getUnreadNotificationCount } from './services/notificationsService';
 
@@ -89,6 +89,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const pendingCheckout = startPlan && startPlan !== 'free' && !!authUser?.id;
   const [checkoutRedirecting, setCheckoutRedirecting] = useState(pendingCheckout);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [brandActionMessage, setBrandActionMessage] = useState<string | null>(null);
   useEffect(() => {
     if (checkoutRedirectStarted.current) return;
     const plan = typeof window !== 'undefined' ? window.sessionStorage.getItem('start_plan') : null;
@@ -317,23 +318,48 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
   const handleUpdateBrandLogo = async (brand: Brand, file: File) => {
     if (!authUser) return;
     const { url, error } = await uploadBrandLogo(brand.id, authUser.id, file);
-    if (error || !url) return;
+    if (error || !url) {
+      setBrandActionMessage(error?.message || 'Logo guncellenemedi.');
+      return;
+    }
     setBrands((prev) =>
       prev.map((b) => (b.id === brand.id ? { ...b, logoUrl: url } : b))
     );
     if (currentBrand?.id === brand.id) {
       setCurrentBrand((prev) => (prev ? { ...prev, logoUrl: url } : null));
     }
+    if (managingBrand?.id === brand.id) {
+      setManagingBrand((prev) => (prev ? { ...prev, logoUrl: url } : null));
+    }
+    setBrandActionMessage('Logo guncellendi.');
   };
 
   const handleAddNewBrand = async () => {
     if (!authUser) return;
-    const { data: newBrand, error } = await createBrand(authUser.id, { name: 'New Brand', website: '' });
-    if (error || !newBrand) return;
+    const nextIndex = brands.length + 1;
+    const { data: newBrand, error } = await createBrand(authUser.id, { name: `New Brand ${nextIndex}`, website: '' });
+    if (error || !newBrand) {
+      setBrandActionMessage(error?.message || 'Yeni marka eklenemedi.');
+      return;
+    }
     setBrands((prev) => [...prev, newBrand]);
     setCurrentBrand(newBrand);
     setManagingBrand(newBrand);
     setView('brand-connect');
+    setBrandActionMessage('Yeni marka eklendi. Ismini ve websitesini guncelleyebilirsin.');
+  };
+
+  const handleSaveBrandDetails = async (brandId: string, payload: { name: string; website: string }) => {
+    if (!authUser) return { ok: false, error: 'Oturum bulunamadi.' };
+    const { data, error } = await updateBrand(authUser.id, brandId, payload);
+    if (error || !data) {
+      return { ok: false, error: error?.message || 'Marka kaydedilemedi.' };
+    }
+    setBrands((prev) => prev.map((b) => (b.id === brandId ? data : b)));
+    if (currentBrand?.id === brandId) setCurrentBrand(data);
+    if (managingBrand?.id === brandId) setManagingBrand(data);
+    setBrandActionMessage('Marka bilgileri guncellendi.');
+    return { ok: true };
   };
 
   // Update Sales Agent Config
@@ -370,6 +396,12 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
         <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-sm text-center flex items-center justify-center gap-2 flex-wrap">
           <span>{checkoutError}</span>
           <button type="button" onClick={() => setCheckoutError(null)} className="underline">Dismiss</button>
+        </div>
+      )}
+      {brandActionMessage && (
+        <div className="bg-green-50 border-b border-green-200 text-green-800 px-4 py-2 text-sm text-center flex items-center justify-center gap-2 flex-wrap">
+          <span>{brandActionMessage}</span>
+          <button type="button" onClick={() => setBrandActionMessage(null)} className="underline">Dismiss</button>
         </div>
       )}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -457,6 +489,7 @@ function MainApp({ authUser, onLogout }: { authUser: { id: string; email?: strin
           <BrandConnectView 
             brand={managingBrand} 
             onBack={() => setView('brands-list')}
+            onSaveBrand={handleSaveBrandDetails}
           />
         )}
 
