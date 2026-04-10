@@ -173,3 +173,4 @@ export const BarChart3 = BarChart2Icon;
 export const Lock = LockIcon;
 export const ArrowRight = ArrowRightIcon;
 export const LayoutGrid = LayoutGridIcon;
+export const Target = TargetIcon;

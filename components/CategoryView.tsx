@@ -1,6 +1,6 @@
 import React from 'react';
 import { Category, Tool, UserTier, ToolAccessLevel, userTierCanAccessTool } from '../types';
-import { getIcon, Search, PlayCircle, BarChart2, Lock, ArrowRight } from '../lib/safeIcons';
+import { getIcon, Search, PlayCircle, BarChart2, Lock, ArrowRight, Zap, Target } from '../lib/safeIcons';
 
 interface CategoryViewProps {
   category: Category;
